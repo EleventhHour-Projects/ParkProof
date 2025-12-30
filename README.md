@@ -125,7 +125,7 @@ ParkProof/
 │   ├── next.config.js
 │   └── package.json
 │
-├── go-backend/
+├── go-backend (root)/
 │   ├── cmd/
 │   │   └── server/
 │   │       └── main.go
