@@ -1,3 +1,5 @@
+import { Types } from "mongoose";
+
 export type ReportType =
   | "OVERPARKING"
   | "TICKET_FRAUD"
@@ -6,7 +8,7 @@ export type ReportType =
 
 export interface Report {
   _id?: string;
-  parkingLotId: string;
+  parkingLotId: Types.ObjectId;
   type: ReportType;
   createdAt?: Date;
 }
