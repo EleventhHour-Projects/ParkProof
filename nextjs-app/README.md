@@ -20,6 +20,63 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+
+## File Structure for Frontend 
+app/
+├── page.tsx                     # Landing page (login / find parking)
+│
+├── login/
+│   └── page.tsx                 # Generic login (optional)
+│
+├── user/
+│   ├── parking/
+│   │   ├── page.tsx             # Parking list
+│   │   └── [parkingLotId]/
+│   │       ├── page.tsx         # Selected parking lot
+│   │       ├── report/
+│   │       │   └── page.tsx
+│   │       └── history/
+│   │           └── page.tsx
+│   │
+│   ├── tickets/
+│   │   ├── page.tsx             # My tickets
+│   │   └── [ticketId]/
+│   │       └── page.tsx
+│   │
+│   └── layout.tsx               # User layout (navbar etc)
+│
+├── attendant/
+│   ├── login/
+│   │   └── page.tsx
+│   ├── dashboard/
+│   │   └── page.tsx
+│   ├── entry/
+│   │   ├── booked/
+│   │   │   └── page.tsx
+│   │   └── manual/
+│   │       └── page.tsx
+│   ├── exit/
+│   │   └── page.tsx
+│   └── layout.tsx               # Attendant layout
+│
+├── admin/
+│   ├── login/
+│   │   └── page.tsx
+│   ├── dashboard/
+│   │   └── page.tsx
+│   ├── parking-lots/
+│   │   ├── page.tsx
+│   │   └── [parkingLotId]/
+│   │       └── page.tsx
+│   ├── reports/
+│   │   └── page.tsx
+│   └── layout.tsx               # Admin layout
+│
+├── api/
+│
+├── layout.tsx                   # Root layout
+└── globals.css
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
