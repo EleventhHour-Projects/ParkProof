@@ -22,6 +22,7 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 
 ## File Structure for Frontend 
+```
 app/
 ├── page.tsx                     # Landing page (login / find parking)
 │
@@ -76,7 +77,7 @@ app/
 │
 ├── layout.tsx                   # Root layout
 └── globals.css
-
+```
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
