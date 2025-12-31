@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type QueryRrquest struct {
+type QueryRequest struct {
 	Query            string    `json:"query"`
 	ToParkingLot     string    `json:"to_parking_lot"`
 	ResponseRequired bool      `json:"response_required"`
@@ -18,7 +18,7 @@ type QueryRrquest struct {
 }
 
 func SendQuery(c *fiber.Ctx) error {
-	var data QueryRrquest
+	var data QueryRequest
 	c.BodyParser(&data)
 
 	q := database.Query{
