@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"app/routes/api"
 	"log"
 
 	"github.com/gofiber/fiber/v2"
@@ -24,6 +25,12 @@ func Router() {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.SendString("OK")
 	})
+
+	// Query Routes
+	app.Post("/api/admin/query", api.SendQuery) // New Query by Admin
+
+	// QR Code Routes
+	app.Post("/internal/vehicleqr", api.GetVehicleQR) // Give QR Code for Vehicle
 
 	log.Fatal(app.Listen(":3000"))
 }

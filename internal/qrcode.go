@@ -1,8 +1,9 @@
 package internal
 
 import (
+	"bytes"
 	"encoding/json"
-	"fmt"
+	"io"
 	"time"
 
 	"github.com/yeqown/go-qrcode/v2"
@@ -12,43 +13,53 @@ import (
 type VehicleTypeEnum string
 
 const (
-	VehicleTypeCar      = "Car"
-	VehicleTypeBike     = "Bike"
+	VehicleTypeCar      = "CAR"
+	VehicleTypeBike     = "BIKE"
 	VehicleTypeRickshaw = "Rickshaw"
 )
 
 type VehicleQRCodeData struct {
 	TicketID    string          `json:"ticket_id"`
 	Vehicle     string          `json:"vehicle"`
-	EntryTime   time.Time       `json:"entryTime"`
+	EntryTime   *time.Time      `json:"entryTime,omitzero"`
 	ParkingLot  string          `json:"parking_lot"`
 	IsExit      bool            `json:"is_exit"`
 	VehicleType VehicleTypeEnum `json:"vehicle_type"`
 }
 
-func QRCode(data VehicleQRCodeData) {
+type nopWriteCloser struct {
+	io.Writer
+}
 
+func (nopWriteCloser) Close() error { return nil }
+
+func QRCode(data VehicleQRCodeData) ([]byte, error) {
 	jsonBytes, err := json.Marshal(data)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
+
 	qr, err := qrcode.New(string(jsonBytes))
 	if err != nil {
-		fmt.Printf("create qrcode failed: %v\n", err)
-		return
+		return nil, err
 	}
+
+	buf := &bytes.Buffer{}
 
 	options := []standard.ImageOption{
 		standard.WithLogoImageFilePNG("./internal/assets/car.png"),
 	}
-	writer, err := standard.New("./qrcode_with_logo.png", options...)
-	if err != nil {
-		fmt.Printf("create writer failed: %v\n", err)
-		return
-	}
+
+	writer := standard.NewWithWriter(
+		nopWriteCloser{buf},
+		options...,
+	)
 
 	defer writer.Close()
-	if err = qr.Save(writer); err != nil {
-		fmt.Printf("save qrcode failed: %v\n", err)
+
+	if err := qr.Save(writer); err != nil {
+		return nil, err
 	}
+
+	return buf.Bytes(), nil
 }
