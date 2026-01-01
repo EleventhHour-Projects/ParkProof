@@ -21,7 +21,7 @@ const UserSchema: Schema<User> = new Schema(
     password: {
       type: String,
       required: true,
-      select: false, // 🔒 never return password by default
+      select: false, // never return password by default
     },
   },
   {
