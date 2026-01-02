@@ -18,11 +18,10 @@ func GetVehicleQR(c *fiber.Ctx) error {
 	c.BodyParser(&d)
 
 	data := internal.VehicleQRCodeData{
+		Type:        "ticket",
 		TicketID:    d.TicketID,
 		Vehicle:     d.Vehicle,
-		EntryTime:   nil,
 		ParkingLot:  d.ParkingLot,
-		IsExit:      false,
 		VehicleType: d.VehicleType,
 	}
 

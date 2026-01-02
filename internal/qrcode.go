@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
-	"time"
 
 	"github.com/yeqown/go-qrcode/v2"
 	"github.com/yeqown/go-qrcode/writer/standard"
@@ -19,11 +18,10 @@ const (
 )
 
 type VehicleQRCodeData struct {
+	Type        string          `json:"type"`
 	TicketID    string          `json:"ticket_id"`
 	Vehicle     string          `json:"vehicle"`
-	EntryTime   *time.Time      `json:"entryTime,omitzero"`
 	ParkingLot  string          `json:"parking_lot"`
-	IsExit      bool            `json:"is_exit"`
 	VehicleType VehicleTypeEnum `json:"vehicle_type"`
 }
 
