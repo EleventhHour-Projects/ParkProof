@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 
 /* =======================
    TYPES
@@ -106,7 +107,7 @@ export default function UserDashboard() {
 
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
-
+  const router = useRouter()
   /* Fetch vehicles */
   useEffect(() => {
     mockFetchVehicles().then(data => {
@@ -172,6 +173,7 @@ export default function UserDashboard() {
 
 
   if (!selectedVehicle) return null
+
 
   return (
     <div className="min-h-screen bg-[#F4F4F4] flex justify-center relative">
@@ -346,9 +348,13 @@ export default function UserDashboard() {
           <button className="w-full bg-[#FFA640] text-white py-3 rounded-full">
             View Parking History
           </button>
-          <button className="w-full bg-[#FFA640] text-white py-3 rounded-full">
-            Find Parking
-          </button>
+<button
+  onClick={() => router.push('/user/parking')}
+  className="w-full bg-[#FFA640] text-white py-3 rounded-full font-medium shadow-sm"
+>
+  Find Parking
+</button>
+
           <button className="w-full bg-[#E05A4F] text-white py-3 rounded-full">
             Report Discrepancy
           </button>
