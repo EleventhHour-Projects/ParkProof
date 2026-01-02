@@ -9,6 +9,11 @@ const ParkingSessionSchema = new Schema<ParkingSession>(
       ref: "ParkingLot",
       index: true,
     },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      index: true,
+    },
 
     vehicleNumber: {
       type: String,
