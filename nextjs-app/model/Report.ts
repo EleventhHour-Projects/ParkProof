@@ -21,6 +21,10 @@ const ReportSchema = new Schema<Report>(
       required: true,
       index: true,
     },
+    reportedBy:{
+      type:String,
+      required:true,
+    }
   },
   {
     timestamps: { createdAt: true, updatedAt: false },
