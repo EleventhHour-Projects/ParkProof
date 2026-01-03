@@ -1,7 +1,7 @@
 import { Types } from "mongoose";
 
 export interface ParkingLot {
-    _id?: string
+    _id?: Types.ObjectId
     pid?: string
     name: string
     area: string
