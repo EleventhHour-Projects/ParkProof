@@ -9,21 +9,43 @@ const ParkingLotSchema = new Schema<ParkingLot>(
       trim: true,
       index: true,
     },
-
-    location: {
+    pid: {
       type: String,
       required: true,
-      trim: true,
+      unique: true,
     },
-
+    area: {
+      type: String,
+      required: true,
+    },
+    address: {
+      type: String,
+      required: true,
+    },
     capacity: {
       type: Number,
       required: true,
       min: 0,
     },
+    lat: {
+      type: Number,
+      required: true,
+    },
+    lng: {
+      type: Number,
+      required: true,
+    },
+    hasEVCharger: {
+      type: Boolean,
+      default: false,
+    },
+    occupied: {
+      type: Number,
+      default: 0,
+    },
   },
   {
-    timestamps: false, 
+    timestamps: false,
   }
 );
 

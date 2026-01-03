@@ -1,10 +1,13 @@
 export interface ParkingLot {
-    _id? : string , 
-    name : string, 
-    location :  string,
+    _id?: string
+    pid?: string
+    name: string
+    area: string
+    address: string
+    location?: string
     capacity: number
-    lng: number,
+    lng: number
     lat: number
-    hasEVCharger: boolean
-    occupied: number
+    hasEVCharger?: boolean
+    occupied?: number
 }
