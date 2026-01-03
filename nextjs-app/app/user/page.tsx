@@ -22,7 +22,7 @@ type TicketStatus = {
 
 type TicketDetails = {
   qrImage: string
-  status: 'ACTIVE' | 'EXPIRED'
+  status: 'ACTIVE' | 'EXPIRED' | 'RESERVED' | 'PARKED'
   entryTime: string
   remainingSeconds: number
   parking: {
@@ -117,21 +117,69 @@ export default function UserDashboard() {
     })
   }, [])
 
+  const fetchTicketStatus = async (vehicleNumber: string) => {
+    try {
+      const res = await fetch(`/api/tickets/active?vehicleNumber=${vehicleNumber}`)
+      const data = await res.json()
+
+      if (data.success && data.active) {
+        setHasTicket(true)
+
+        // Map API response to TicketDetails
+        const validTill = data.ticket ? new Date(data.ticket.validTill) : new Date(Date.now() + 3600000)
+        const entryTime = data.status === 'PARKED' ? new Date(data.entryTime) : (data.ticket ? new Date(data.ticket.createdAt) : new Date())
+
+        let remaining = 0;
+
+        if (data.status === 'RESERVED') {
+          // For RESERVED, show time left to enter (validTill - now)
+          remaining = Math.max(0, Math.floor((validTill.getTime() - Date.now()) / 1000))
+        } else {
+          // For PARKED, show elapsed time (now - entryTime)
+          remaining = Math.floor((Date.now() - entryTime.getTime()) / 1000)
+        }
+
+
+        setTicketDetails({
+          qrImage: data.qrCode || './qr.png', // Use API provided QR or fallback
+          status: data.status,
+          entryTime: entryTime.toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
+          remainingSeconds: remaining,
+          parking: {
+            name: data.parkingLot.name,
+            addressLine1: data.parkingLot.address,
+            addressLine2: data.parkingLot.area,
+            ratePerHour: data.ticket ? data.ticket.amount : 20, // Fallback rate
+          },
+          billing: {
+            currentAmount: data.ticket ? data.ticket.amount : 0,
+            originalAmount: data.ticket ? data.ticket.amount : 0,
+          }
+        })
+        setRemainingSeconds(remaining)
+
+      } else {
+        setHasTicket(false)
+        setTicketDetails(null)
+        setRemainingSeconds(null)
+      }
+    } catch (error) {
+      console.error("Failed to fetch ticket status", error)
+      setHasTicket(false)
+    }
+  }
+
   /* Fetch ticket when vehicle changes */
   useEffect(() => {
     if (!selectedVehicle) return
+    fetchTicketStatus(selectedVehicle.number)
 
-    mockFetchTicketStatus(selectedVehicle.id).then(status => {
-      setHasTicket(status.active)
-      if (status.active) {
-        mockFetchTicketDetails(selectedVehicle.id).then(details => {
-          setTicketDetails(details)
-          setRemainingSeconds(details.remainingSeconds)
-        })
-      } else {
-        setTicketDetails(null)
-      }
-    })
+    // Poll every 30 seconds to keep updated
+    const pollInterval = setInterval(() => {
+      if (selectedVehicle) fetchTicketStatus(selectedVehicle.number)
+    }, 150000)
+
+    return () => clearInterval(pollInterval)
   }, [selectedVehicle])
 
   /* Close dropdown */
@@ -146,22 +194,27 @@ export default function UserDashboard() {
   }, [])
 
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
-  useEffect(() => {
-    if (remainingSeconds === null) return
 
-    if (remainingSeconds <= 0) {
-      setHasTicket(false)
-      setTicketDetails(null)
-      setRemainingSeconds(null)
-      return
-    }
+  // Timer Logic
+  useEffect(() => {
+    if (remainingSeconds === null || !ticketDetails) return
 
     const interval = setInterval(() => {
-      setRemainingSeconds(prev => (prev !== null ? prev + 1 : prev))
+      setRemainingSeconds(prev => {
+        if (prev === null) return null
+
+        if (ticketDetails.status === 'PARKED') {
+          // Elapsed time increases
+          return prev + 1
+        } else {
+          // Reserved time decreases
+          return prev > 0 ? prev - 1 : 0
+        }
+      })
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [remainingSeconds])
+  }, [ticketDetails?.status]) // Re-run if status changes
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600)
@@ -180,28 +233,6 @@ export default function UserDashboard() {
   return (
     <div className="min-h-screen bg-[#F4F4F4] text-slate-800 font-sans pb-10">
 
-      {/* DEV CHIP */}
-      <button
-        onClick={async () => {
-          const res = await mockToggleTicketStatus(
-            selectedVehicle.id,
-            hasTicket
-          )
-          setHasTicket(res.active)
-          if (res.active) {
-            const details = await mockFetchTicketDetails(selectedVehicle.id)
-            setTicketDetails(details)
-            setRemainingSeconds(details.remainingSeconds)
-          } else {
-            setTicketDetails(null)
-            setRemainingSeconds(null)
-          }
-        }}
-        className="fixed top-20 right-4 z-50 text-[10px] bg-black/80 text-white px-3 py-1 rounded-full shadow-lg backdrop-blur-sm"
-      >
-        {hasTicket ? 'HAS TICKET' : 'NO TICKET'}
-      </button>
-
       {/* Header */}
       <div className="flex items-center justify-between pt-8 pb-4 px-6 sticky top-0 bg-[#F4F4F4]/80 backdrop-blur-md z-40">
         <button className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-slate-100 hover:shadow-md transition-all active:scale-95">
@@ -216,6 +247,10 @@ export default function UserDashboard() {
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h7" />
           </svg>
         </button>
+
+        <h1 className="text-xl font-bold text-slate-800">
+          Dashboard
+        </h1>
 
         <button className="bg-[#FFA640] text-white px-6 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-orange-200 hover:shadow-xl hover:bg-[#ff9922] transition-all active:scale-95">
           Logout
@@ -313,7 +348,7 @@ export default function UserDashboard() {
         {hasTicket && ticketDetails && (
           <div className="bg-white rounded-[2.5rem] p-6 shadow-xl shadow-blue-900/5 border border-slate-100 relative overflow-hidden">
             {/* Decorative Top */}
-            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 to-blue-600" />
+            <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${ticketDetails.status === 'RESERVED' ? 'from-orange-400 to-orange-500' : 'from-blue-500 to-blue-600'}`} />
 
             <div className="text-center pt-2 pb-6 border-b border-dashed border-slate-200 relative">
               {/* Notches */}
@@ -323,14 +358,14 @@ export default function UserDashboard() {
               <Image src={ticketDetails.qrImage} alt="Ticket QR" width={160} height={160} className="mx-auto mix-blend-multiply opacity-90" />
 
               <div className="mt-4 flex flex-col items-center gap-1">
-                <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-[10px] font-bold tracking-wider">
+                <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-wider ${ticketDetails.status === 'RESERVED' ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'}`}>
                   {ticketDetails.status}
                 </span>
                 <div className="text-3xl font-mono font-bold text-slate-800 tracking-tight mt-1">
                   {remainingSeconds !== null && formatTime(remainingSeconds)}
                 </div>
                 <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">
-                  Elapsed Time
+                  {ticketDetails.status === 'RESERVED' ? 'Time to Entry' : 'Elapsed Time'}
                 </div>
               </div>
             </div>
@@ -362,11 +397,6 @@ export default function UserDashboard() {
                     <span className="text-2xl font-bold text-slate-900">
                       ₹{ticketDetails.billing.currentAmount}
                     </span>
-                    {ticketDetails.billing.originalAmount > ticketDetails.billing.currentAmount && (
-                      <span className="text-xs text-slate-400 line-through decoration-slate-300">
-                        ₹{ticketDetails.billing.originalAmount}
-                      </span>
-                    )}
                   </div>
                 </div>
 

@@ -10,6 +10,9 @@ export interface Ticket {
 
   status: TicketStatus;           // CREATED = reserved
 
+  vehicleType: '4w' | '2w' | '3w';
+  amount: number;
+
   validTill: Date;                // booking time + 1h 10m
 
   createdAt?: Date;

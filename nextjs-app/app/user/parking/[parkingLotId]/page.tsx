@@ -20,11 +20,11 @@ export default function SelectedParkingLotPage() {
   // -- HOOKS MUST BE AT THE TOP LEVEL --
   const [lot, setLot] = useState<ParkingLot | null>(null)
   const [loading, setLoading] = useState(true)
-  
+
   // Vehicle Selection State
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
-  const [vehicleType, setVehicleType] = useState('4w') 
+  const [vehicleType, setVehicleType] = useState('4w')
   const [open, setOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement | null>(null)
 
@@ -85,9 +85,9 @@ export default function SelectedParkingLotPage() {
   // Update vehicle type based on selection
   useEffect(() => {
     if (selectedVehicle) {
-      const type = 
+      const type =
         selectedVehicle.model.toLowerCase().includes('bike') || selectedVehicle.model.toLowerCase().includes('scooter') ? '2w' :
-        selectedVehicle.model.toLowerCase().includes('auto') ? '3w' : '4w'
+          selectedVehicle.model.toLowerCase().includes('auto') ? '3w' : '4w'
       setVehicleType(type)
     }
   }, [selectedVehicle])
@@ -112,6 +112,52 @@ export default function SelectedParkingLotPage() {
   )
 
   const available = (lot.capacity || 100) - (lot.occupied || 0)
+
+  const handleBooking = async () => {
+    if (!selectedVehicle || !lot) {
+      alert("Please select a vehicle first")
+      return
+    }
+
+    try {
+      setLoading(true)
+      const amount = vehicleType === '4w' ? 20 : vehicleType === '3w' ? 20 : 10
+
+      const response = await fetch('/api/booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parkingLotId: lot._id, // Ensure lot object has _id from DB
+          vehicleNumber: selectedVehicle.number,
+          vehicleType,
+          amount
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        alert("Booking Successful!")
+        router.push('/user/tickets')
+      } else {
+        alert(data.message || "Booking Failed")
+      }
+    } catch (error) {
+      console.error("Booking failed", error)
+      alert("Something went wrong")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Calculate pricing for display
+  const getPrice = (type: string) => {
+    switch (type) {
+      case '4w': return 20;
+      case '3w': return 20;
+      case '2w': return 10;
+      default: return 20;
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#F4F4F4] flex flex-col font-sans text-slate-800 pb-10 animate-in fade-in duration-500">
@@ -161,7 +207,7 @@ export default function SelectedParkingLotPage() {
                 </p>
               </div>
             </div>
-            
+
             <div className="text-right shrink-0 bg-blue-50/50 p-3 rounded-2xl">
               <div className="text-3xl font-extrabold text-blue-600 tracking-tight">
                 {available}<span className="text-lg text-blue-400 font-bold">/{lot.capacity}</span>
@@ -179,15 +225,15 @@ export default function SelectedParkingLotPage() {
             Select Vehicle
             <span className="text-xs font-normal text-slate-400 bg-slate-100 px-2 py-1 rounded-full">Auto-selected</span>
           </h2>
-          
+
           <div className="space-y-4">
             {/* 4 Wheeler */}
-            <div 
+            <div
               onClick={() => setVehicleType('4w')}
               className={`
                 flex items-center justify-between p-4 rounded-3xl cursor-pointer transition-all duration-300 border-2
-                ${vehicleType === '4w' 
-                  ? 'bg-orange-50 border-[#FFA640] shadow-md shadow-orange-100' 
+                ${vehicleType === '4w'
+                  ? 'bg-orange-50 border-[#FFA640] shadow-md shadow-orange-100'
                   : 'bg-gray-50/50 border-transparent hover:bg-gray-100'}
               `}
             >
@@ -207,12 +253,12 @@ export default function SelectedParkingLotPage() {
             </div>
 
             {/* 2 Wheeler */}
-            <div 
-               onClick={() => setVehicleType('2w')}
-               className={`
+            <div
+              onClick={() => setVehicleType('2w')}
+              className={`
                 flex items-center justify-between p-4 rounded-3xl cursor-pointer transition-all duration-300 border-2
-                ${vehicleType === '2w' 
-                  ? 'bg-orange-50 border-[#FFA640] shadow-md shadow-orange-100' 
+                ${vehicleType === '2w'
+                  ? 'bg-orange-50 border-[#FFA640] shadow-md shadow-orange-100'
                   : 'bg-gray-50/50 border-transparent hover:bg-gray-100'}
               `}
             >
@@ -232,12 +278,12 @@ export default function SelectedParkingLotPage() {
             </div>
 
             {/* 3 Wheeler */}
-            <div 
-               onClick={() => setVehicleType('3w')}
-               className={`
+            <div
+              onClick={() => setVehicleType('3w')}
+              className={`
                 flex items-center justify-between p-4 rounded-3xl cursor-pointer transition-all duration-300 border-2
-                ${vehicleType === '3w' 
-                  ? 'bg-orange-50 border-[#FFA640] shadow-md shadow-orange-100' 
+                ${vehicleType === '3w'
+                  ? 'bg-orange-50 border-[#FFA640] shadow-md shadow-orange-100'
                   : 'bg-gray-50/50 border-transparent hover:bg-gray-100'}
               `}
             >
@@ -261,7 +307,7 @@ export default function SelectedParkingLotPage() {
         {/* Vehicle Selector Dropdown */}
         <div ref={dropdownRef} className="relative z-30">
           <label className="block text-sm font-bold text-slate-600 mb-2 ml-1">
-             Select Saved Vehicle
+            Select Saved Vehicle
           </label>
           <button
             onClick={() => setOpen(!open)}
@@ -283,7 +329,7 @@ export default function SelectedParkingLotPage() {
                 </div>
               </>
             ) : (
-               <div className="flex-1 text-left font-bold text-slate-400">Loading vehicles...</div>
+              <div className="flex-1 text-left font-bold text-slate-400">Loading vehicles...</div>
             )}
 
             <div className={`w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center transition-transform duration-300 ${open ? 'rotate-180 bg-slate-100' : ''}`}>
@@ -342,11 +388,22 @@ export default function SelectedParkingLotPage() {
             Report Discrepancy
           </button>
 
-          <button className="w-full bg-[#98FB98] text-[#2E8B57] py-4 rounded-[2rem] text-xl font-bold shadow-lg shadow-green-100 hover:bg-[#8cee8c] hover:shadow-green-200 hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-6 h-6 opacity-90">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
-            </svg>
-            Book a Ticket
+          <button
+            onClick={handleBooking}
+            disabled={loading}
+            className="w-full bg-[#98FB98] text-[#2E8B57] py-4 rounded-[2rem] text-xl font-bold shadow-lg shadow-green-100 hover:bg-[#8cee8c] hover:shadow-green-200 hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? (
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#2E8B57]"></div>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-6 h-6 opacity-90">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 6v.75m0 3v.75m0 3v.75m0 3V18m-9-5.25h5.25M7.5 15h3M3.375 5.25c-.621 0-1.125.504-1.125 1.125v3.026a2.999 2.999 0 010 5.198v3.026c0 .621.504 1.125 1.125 1.125h17.25c.621 0 1.125-.504 1.125-1.125v-3.026a2.999 2.999 0 010-5.198V6.375c0-.621-.504-1.125-1.125-1.125H3.375z" />
+                </svg>
+                Book Ticket (₹{getPrice(vehicleType)}/hr)
+              </>
+            )}
+
           </button>
 
           {/* UPI Logo */}

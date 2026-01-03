@@ -32,5 +32,5 @@ func Router() {
 	// QR Code Routes
 	app.Post("/internal/vehicleqr", api.GetVehicleQR) // Give QR Code for Vehicle
 
-	log.Fatal(app.Listen(":3000"))
+	log.Fatal(app.Listen(":8000"))
 }
