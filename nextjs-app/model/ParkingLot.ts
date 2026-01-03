@@ -37,11 +37,19 @@ const ParkingLotSchema = new Schema<ParkingLot>(
     },
     hasEVCharger: {
       type: Boolean,
+      required: true,
       default: false,
     },
     occupied: {
       type: Number,
+      required: true,
       default: 0,
+      min: 0,
+    },
+    contractorPhone: {
+      type: String,
+      required: false,
+      trim: true,
     },
   },
   {

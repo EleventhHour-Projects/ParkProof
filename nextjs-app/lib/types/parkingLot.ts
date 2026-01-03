@@ -10,4 +10,5 @@ export interface ParkingLot {
     lat: number
     hasEVCharger?: boolean
     occupied?: number
+    contractorPhone?: string;
 }
