@@ -45,10 +45,10 @@ export async function POST(request: NextRequest) {
             { status: 201 }
         );
 
-    } catch (error: any) {
+    } catch (error) {
         console.error("Booking Error:", error);
         return NextResponse.json(
-            { success: false, message: "Failed to book ticket", error: error.message },
+            { success: false, message: "Failed to book ticket"},
             { status: 500 }
         );
     }
