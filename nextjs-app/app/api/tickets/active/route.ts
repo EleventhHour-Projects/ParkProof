@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
         // 1. Find the latest active ticket (CREATED)
         const ticket = await TicketModel.findOne({
             vehicleNumber: vehicleNumber,
-            status: "CREATED",
+            status: { $in: ["CREATED", "USED"] },
             validTill: { $gt: new Date() }, // Not expired
         })
             .sort({ createdAt: -1 })
@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
 
         // Helper to fetch QR
         const fetchQRCode = async (ticket: any) => {
+            //console.log("ticket", ticket);
             try {
                 const vehicleTypeMap: Record<string, string> = {
                     '4w': 'CAR',
@@ -72,10 +73,7 @@ export async function GET(request: NextRequest) {
         if (session) {
             // Vehicle has entered -> PARKED
 
-            let qrCode = '/qr.png';
-            if (ticket) {
-                qrCode = await fetchQRCode(ticket);
-            }
+            const qrCode = await fetchQRCode(ticket);
 
             return NextResponse.json({
                 success: true,

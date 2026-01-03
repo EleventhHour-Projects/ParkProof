@@ -10,6 +10,12 @@ const UserSchema: Schema<User> = new Schema(
       default: "PARKER",
     },
 
+    parkingLotId: {
+      type: Schema.Types.ObjectId,
+      ref: "ParkingLot",
+      required: false, // Only for ATTENDANT
+    },
+
     phone: {
       type: String,
       required: true,

@@ -53,46 +53,6 @@ const mockFetchVehicles = (): Promise<Vehicle[]> =>
     }, 300)
   )
 
-const mockFetchTicketStatus = (vehicleId: number): Promise<TicketStatus> =>
-  new Promise(resolve =>
-    setTimeout(() => {
-      resolve({ vehicleId, active: vehicleId !== 2 })
-    }, 300)
-  )
-
-const mockFetchTicketDetails = (vehicleId: number): Promise<TicketDetails> =>
-  new Promise(resolve =>
-    setTimeout(() => {
-      resolve({
-        qrImage: '/qr.png',
-        status: 'ACTIVE',
-        entryTime: '14/02/2026 • 03:14 PM',
-        remainingSeconds: 3 * 3600 + 54 * 60 + 43,
-        parking: {
-          name: 'MCD Rohini',
-          addressLine1: 'Near DTU',
-          addressLine2: 'Rohini Sector - XX ND - 1100XX',
-          ratePerHour: 20,
-        },
-        billing: {
-          currentAmount: 60,
-          originalAmount: 80,
-        },
-      })
-    }, 300)
-  )
-
-
-const mockToggleTicketStatus = (
-  vehicleId: number,
-  current: boolean
-): Promise<TicketStatus> =>
-  new Promise(resolve =>
-    setTimeout(() => {
-      resolve({ vehicleId, active: !current })
-    }, 300)
-  )
-
 
 /* =======================
    COMPONENT
