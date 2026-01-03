@@ -137,7 +137,7 @@ export default function SelectedParkingLotPage() {
       const data = await response.json()
       if (data.success) {
         alert("Booking Successful!")
-        router.push('/user/tickets')
+        router.push('/user')
       } else {
         alert(data.message || "Booking Failed")
       }

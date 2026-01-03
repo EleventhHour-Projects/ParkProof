@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Types } from "mongoose";
 import dbConnect from "@/lib/db/dbConnect";
 import TicketModel from "@/model/Tickets";
 import ParkingLotModel from "@/model/ParkingLot";
@@ -7,7 +8,7 @@ export async function POST(request: NextRequest) {
     try {
         await dbConnect();
         const body = await request.json();
-        const { parkingLotId, vehicleNumber, vehicleType, amount } = body;
+        let { parkingLotId, vehicleNumber, vehicleType, amount } = body;
 
         // Validate inputs
         if (!parkingLotId || !vehicleNumber || !vehicleType || !amount) {
@@ -17,13 +18,22 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Optional: Check if parking lot exists and has space (omitted for basic implementation)
-        // const lot = await ParkingLotModel.findOne({ pid: parkingLotId });
-        // if (!lot) return NextResponse.json({ success: false, message: "Invalid Parking Lot" }, { status: 404 });
+        // Handle PID resolution if not an ObjectId
+        if (!Types.ObjectId.isValid(parkingLotId)) {
+            // Assume it's a PID and try to find the lot
+            const lot = await ParkingLotModel.findOne({ pid: parkingLotId });
+            if (!lot) {
+                return NextResponse.json(
+                    { success: false, message: `Invalid Parking Lot PID: ${parkingLotId}` },
+                    { status: 404 }
+                );
+            }
+            parkingLotId = lot._id;
+        }
 
         // Create Ticket
         const newTicket = await TicketModel.create({
-            parkingLotId, // Expecting ObjectId or string that matches Schema
+            parkingLotId,
             vehicleNumber,
             vehicleType,
             amount,
