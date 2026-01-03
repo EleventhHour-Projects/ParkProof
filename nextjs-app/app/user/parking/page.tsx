@@ -1,60 +1,26 @@
 'use client'
 
-import { useState } from 'react'
-import { MapContainer, TileLayer, Marker } from 'react-leaflet'
+import { useState, useEffect } from 'react'
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { useRouter } from 'next/navigation'
+import type { ParkingLot } from '@/lib/types/parkingLot'
 
 /* =======================
    TYPES & DATA
 ======================= */
 
-export type ParkingLot = {
-  id: string
-  name: string
-  area: string
-  address: string
-  lat: number
-  lng: number
-  capacity: number
-  occupied: number
-  hasEVCharger?: boolean
-}
 
-export const parkingLots: ParkingLot[] = [
-  {
-    id: 'geeta',
-    name: 'MCD Geeta Colony',
-    area: 'Near NSUT East Campus',
-    address: 'Geeta Colony ND - 1100XX',
-    lat: 28.6562,
-    lng: 77.2689,
-    capacity: 69,
-    occupied: 2,
-    hasEVCharger: true,
-  },
-  {
-    id: 'rohini',
-    name: 'MCD Rohini',
-    area: 'Near DTU',
-    address: 'Rohini Sector - XX ND - 1100XX',
-    lat: 28.7499,
-    lng: 77.1177,
-    capacity: 100,
-    occupied: 100,
-  },
-  {
-    id: 'vasant',
-    name: 'MCD Vasant Vihar',
-    area: 'Near Metro Gate No - 2',
-    address: 'Vasant Vihar ND - 110057',
-    lat: 28.5588,
-    lng: 77.1620,
-    capacity: 100,
-    occupied: 54,
-    hasEVCharger: true,
-  },
-]
+/* =======================
+   Leaflet Fixes
+======================= */
+// Fix for default markers in Next.js
+delete (L.Icon.Default.prototype as any)._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+})
 
 /* =======================
    LEAFLET ICON
@@ -62,9 +28,67 @@ export const parkingLots: ParkingLot[] = [
 
 const parkingIcon = new L.Icon({
   iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-  iconSize: [34, 34],
-  iconAnchor: [17, 34],
+  iconSize: [38, 38],
+  iconAnchor: [19, 38],
+  popupAnchor: [0, -40],
 })
+
+const activeIcon = new L.Icon({
+  iconUrl: 'https://cdn-icons-png.flaticon.com/512/684/684908.png', // Could be a different color
+  iconSize: [46, 46],
+  iconAnchor: [23, 46],
+  popupAnchor: [0, -48],
+  className: 'animate-bounce'
+})
+
+/* =======================
+   SUB-COMPONENTS
+======================= */
+
+// 1. Auto-Zoom to fit all markers
+function MapUpdater({ lots }: { lots: ParkingLot[] }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (lots.length > 0) {
+      const bounds = L.latLngBounds(lots.map(l => [l.lat, l.lng]))
+      map.fitBounds(bounds, { padding: [50, 50] })
+    }
+  }, [lots, map])
+
+  return null
+}
+
+// 2. Locate User Button
+function LocationMarker() {
+  const map = useMap()
+
+  const handleLocate = () => {
+    map.locate().on("locationfound", function (e) {
+      map.flyTo(e.latlng, 14)
+      L.circle(e.latlng, { radius: e.accuracy }).addTo(map)
+    })
+  }
+
+  return (
+    <div className="absolute top-4 right-4 z-[400]">
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          handleLocate()
+        }}
+        className="bg-white p-2.5 rounded-xl shadow-lg border border-slate-100 text-slate-700 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+        title="Locate Me"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </button>
+    </div>
+  )
+}
+
 
 /* =======================
    PAGE
@@ -74,46 +98,69 @@ export default function FindParkingPage() {
   const router = useRouter()
   const [selected, setSelected] = useState<ParkingLot | null>(null)
   const [onlyAvailable, setOnlyAvailable] = useState(false)
+  const [parkingLots, setParkingLots] = useState<ParkingLot[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchParkingLots = async () => {
+      try {
+        const response = await fetch('/api/parking')
+        const data = await response.json()
+        if (data.success) {
+          setParkingLots(data.data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch parking lots', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchParkingLots()
+  }, [])
 
   const filteredLots = onlyAvailable
-    ? parkingLots.filter(l => l.capacity - l.occupied > 0)
+    ? parkingLots.filter(l => (l.capacity || 0) - (l.occupied || 0) > 0)
     : parkingLots
 
   return (
-    <div className="min-h-screen bg-[#f6f3f1] flex flex-col pb-28">
+    <div className="min-h-screen bg-[#F4F4F4] flex flex-col pb-32 font-sans text-slate-800">
 
       {/* Header */}
-      <div className="flex items-center justify-between pt-6 pb-4 px-4">
-<button
-  onClick={() => router.push('/user')}
-  className="w-10 h-10 rounded-full bg-white flex items-center justify-center shadow-sm"
->
-  <svg
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    className="w-5 h-5 text-gray-700"
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-  </svg>
-</button>
+      <div className="flex items-center justify-between pt-8 pb-2 px-6 bg-[#F4F4F4]/80 backdrop-blur-md sticky top-0 z-40">
+        <button
+          onClick={() => router.push('/user')}
+          className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-slate-100 hover:shadow-md transition-all active:scale-95"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            className="w-5 h-5 text-gray-700"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
 
+        <h1 className="text-xl font-bold text-slate-800">
+          Find Parking
+        </h1>
 
-        <button className="bg-[#FFA640] text-white px-5 py-2 rounded-full text-sm font-medium shadow">
+        <button className="bg-[#FFA640] text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-orange-200 hover:shadow-xl hover:bg-[#ff9922] transition-all active:scale-95">
           Logout
         </button>
       </div>
 
       {/* Search */}
-      <div className="px-4">
-        <div className="relative">
+      <div className="px-6 mt-2 sticky top-[80px] z-30">
+        <div className="relative group">
           <input
-            placeholder="Search parking area"
-            className="w-full rounded-full pl-11 pr-4 py-2.5 bg-white shadow-sm outline-none text-sm placeholder-gray-400"
+            placeholder="Search location, area..."
+            className="w-full rounded-[1.5rem] pl-12 pr-4 py-4 bg-white border border-transparent focus:border-[#FFA640]/30 shadow-sm focus:shadow-lg transition-all outline-none text-base placeholder:text-gray-400 text-slate-700"
           />
           <svg
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-[#FFA640] transition-colors"
             viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
           >
             <circle cx="11" cy="11" r="8" />
@@ -123,102 +170,149 @@ export default function FindParkingPage() {
       </div>
 
       {/* Map */}
-      <div className="px-4 mt-4">
-        <div className="rounded-2xl overflow-hidden shadow-lg">
+      <div className="px-6 mt-6">
+        <div className="rounded-[2.5rem] overflow-hidden shadow-xl shadow-gray-200/50 border-4 border-white relative z-0">
           <MapContainer
             center={[28.61, 77.23]}
             zoom={11}
             attributionControl={false}
-            className="h-[260px] w-full"
+            className="h-[320px] w-full bg-slate-100"
           >
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            {filteredLots.map(lot => (
-              <Marker
-                key={lot.id}
-                position={[lot.lat, lot.lng]}
-                icon={parkingIcon}
-                eventHandlers={{ click: () => setSelected(lot) }}
-              />
-            ))}
+            <TileLayer
+              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            />
+
+            <MapUpdater lots={filteredLots} />
+            <LocationMarker />
+
+            {filteredLots.map(lot => {
+              const isSelected = selected?._id === lot._id
+              return (
+                <Marker
+                  key={lot._id}
+                  position={[lot.lat, lot.lng]}
+                  icon={isSelected ? activeIcon : parkingIcon}
+                  eventHandlers={{
+                    click: () => setSelected(lot),
+                  }}
+                >
+                  <Popup className="font-sans text-sm font-medium">
+                    <div className="p-1">
+                      <p className="font-bold text-slate-800">{lot.name}</p>
+                      <p className="text-slate-500 text-xs">{lot.area}</p>
+                      <div className="mt-2 flex gap-2">
+                        <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold">
+                          {(lot.capacity - (lot.occupied || 0))} Available
+                        </span>
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              )
+            })}
           </MapContainer>
         </div>
       </div>
 
-      <p className="px-4 mt-3 text-xs text-gray-500">
-        Tap a marker or card to select parking
-      </p>
+      <div className="px-6 mt-6 flex items-center justify-between">
+        <h2 className="text-lg font-bold text-slate-800">
+          Nearby Spots
+        </h2>
+        <span className="text-xs font-medium text-gray-400 bg-white px-3 py-1 rounded-full shadow-sm">
+          {filteredLots.length} results
+        </span>
+      </div>
 
       {/* Parking List */}
-      <div className="flex-1 px-4 mt-3 space-y-3">
-        {filteredLots.map(lot => {
-          const occupied = lot.occupied
+      <div className="flex-1 px-5 mt-4 space-y-4">
+        {loading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="h-28 bg-white/50 animate-pulse rounded-[2rem]" />
+            ))}
+          </div>
+        ) : filteredLots.map(lot => {
+          const occupied = lot.occupied || 0
           const total = lot.capacity
           const available = total - occupied
 
           const isFull = available <= 0
-          const isSelected = selected?.id === lot.id
+          const isSelected = selected?._id === lot._id
 
           const fillPercent = (occupied / total) * 100
           const availabilityPercent = (available / total) * 100
 
-          const availabilityColor =
+          const statusColor =
             availabilityPercent >= 50
-              ? { text: 'text-green-700', bar: 'bg-green-500', bg: 'bg-green-100' }
+              ? 'text-emerald-600 bg-emerald-50 mb-1 ring-emerald-500/20'
               : availabilityPercent >= 20
-              ? { text: 'text-yellow-700', bar: 'bg-yellow-500', bg: 'bg-yellow-100' }
-              : { text: 'text-red-700', bar: 'bg-red-500', bg: 'bg-red-100' }
+                ? 'text-amber-600 bg-amber-50 mb-1 ring-amber-500/20'
+                : 'text-rose-600 bg-rose-50 mb-1 ring-rose-500/20'
+
+          const barColor =
+            availabilityPercent >= 50 ? 'bg-emerald-500'
+              : availabilityPercent >= 20 ? 'bg-amber-500'
+                : 'bg-rose-500'
 
           return (
             <div
-              key={lot.id}
-              onClick={() => setSelected(lot)}
+              key={lot._id}
+              onClick={() => {
+                setSelected(lot)
+                router.push(`/user/parking/${lot.pid}`)
+              }}
               className={`
-                rounded-xl p-4 cursor-pointer transition border shadow-sm
-                ${isSelected ? 'bg-blue-50 border-blue-500' : 'bg-white'}
+                relative overflow-hidden rounded-[2rem] p-5 cursor-pointer transition-all duration-300
+                border-2
+                ${isSelected
+                  ? 'bg-orange-50/80 border-[#FFA640] shadow-xl shadow-orange-500/10 scale-[1.02]'
+                  : 'bg-white border-transparent shadow-sm hover:shadow-md hover:border-gray-100'}
               `}
             >
-              <div className="flex justify-between gap-3">
-                <div>
-                  <p className="font-semibold text-sm text-gray-900 flex items-center gap-2">
-                    {lot.name}
-
+              <div className="flex justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-slate-800 text-base truncate">
+                      {lot.name}
+                    </h3>
                     {lot.hasEVCharger && (
-                      <span className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5 text-green-600">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
-                        </svg>
-                      </span>
+                      <div title="EV Charging">
+                        <img src="/charging.png" alt="EV" className="w-4 h-4 object-contain" />
+                      </div>
                     )}
-                  </p>
+                  </div>
 
-                  <p className="text-xs text-gray-500 mt-0.5">{lot.area}</p>
-                  <p className="text-[11px] text-gray-400 mt-1">{lot.address}</p>
+                  <p className="text-sm font-medium text-gray-500 truncate">{lot.area}</p>
+                  <p className="text-xs text-gray-400 mt-1 truncate">{lot.address}</p>
                 </div>
 
                 {/* Occupied / Total */}
-                <div className="flex items-start">
+                <div className="flex flex-col items-end gap-2 shrink-0">
                   {isFull ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-600 border border-gray-200">
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                        <circle cx="12" cy="12" r="9" />
-                        <path d="M8 12h8" />
-                      </svg>
-                      Full
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full bg-gray-100 text-gray-500">
+                      FULL
                     </span>
                   ) : (
-                    <div className="flex flex-col items-end gap-1">
-                      <span className={`text-sm font-semibold ${availabilityColor.text}`}>
-                        {occupied}/{total}
+                    <div className="flex flex-col items-end gap-1.5">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold ring-1 ring-inset ${statusColor}`}>
+                        {available} spots left
                       </span>
-                      <div className={`w-16 h-2 rounded-full overflow-hidden ${availabilityColor.bg}`}>
-                        <div
-                          className={`h-full rounded-full transition-all duration-300 ${availabilityColor.bar}`}
-                          style={{ width: `${fillPercent}%` }}
-                        />
-                      </div>
                     </div>
                   )}
                 </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="mt-4 flex items-center gap-3">
+                <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all duration-700 ease-out ${barColor}`}
+                    style={{ width: `${fillPercent}%` }}
+                  />
+                </div>
+                <span className="text-xs font-bold text-gray-400 w-12 text-right">
+                  {Math.round(fillPercent)}%
+                </span>
               </div>
             </div>
           )
@@ -226,32 +320,22 @@ export default function FindParkingPage() {
       </div>
 
       {/* Bottom Filter */}
-      <div className="
-  fixed bottom-0 left-0 right-0
-  bg-white border-t
-  shadow-[0_-6px_24px_rgba(0,0,0,0.08)]
-  px-4 py-4
-  flex items-center justify-between
-">
-  <span className="text-sm font-medium text-gray-700">
-    Show available parking only
-  </span>
-
-  <button
-    onClick={() => setOnlyAvailable(!onlyAvailable)}
-    className={`
-      relative inline-flex h-6 w-11 items-center rounded-full transition
-      ${onlyAvailable ? 'bg-blue-600' : 'bg-gray-300'}
-    `}
-  >
-    <span
-      className={`
-        inline-block h-5 w-5 transform rounded-full bg-white shadow transition
-        ${onlyAvailable ? 'translate-x-5' : 'translate-x-1'}
-      `}
-    />
-  </button>
-</div>
+      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
+        <button
+          onClick={() => setOnlyAvailable(!onlyAvailable)}
+          className={`
+            flex items-center gap-3 px-6 py-4 rounded-full shadow-xl transition-all active:scale-95
+            ${onlyAvailable
+              ? 'bg-[#FFA640] text-white shadow-orange-200'
+              : 'bg-white text-slate-700 shadow-gray-200/50 hover:bg-gray-50'}
+          `}
+        >
+          <span className="text-sm font-bold">Available Only</span>
+          <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-colors ${onlyAvailable ? 'bg-white/20' : 'bg-slate-100'}`}>
+            {onlyAvailable && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} className="w-3 h-3"><path d="M5 13l4 4L19 7" /></svg>}
+          </div>
+        </button>
+      </div>
 
     </div>
   )

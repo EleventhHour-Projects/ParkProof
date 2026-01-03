@@ -2,6 +2,7 @@ package api
 
 import (
 	"app/internal"
+	"fmt"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -24,6 +25,7 @@ func GetVehicleQR(c *fiber.Ctx) error {
 		ParkingLot:  d.ParkingLot,
 		VehicleType: d.VehicleType,
 	}
+	fmt.Println(data)
 
 	png, err := internal.QRCode(data)
 	if err != nil {
@@ -32,6 +34,6 @@ func GetVehicleQR(c *fiber.Ctx) error {
 
 	c.Set("Content-Type", "image/png")
 	c.Set("Content-Disposition", "inline; filename=parking_qr.png")
-
+	fmt.Println("Send QR")
 	return c.Send(png)
 }

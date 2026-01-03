@@ -20,6 +20,17 @@ const TicketSchema = new Schema<Ticket>(
       index: true,
     },
 
+    vehicleType: {
+      type: String,
+      enum: ['4w', '2w', '3w'],
+      required: true,
+    },
+
+    amount: {
+      type: Number,
+      required: true,
+    },
+
     status: {
       type: String,
       enum: ["CREATED", "USED", "EXPIRED"],
