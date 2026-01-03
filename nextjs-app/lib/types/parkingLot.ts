@@ -1,3 +1,5 @@
+import { Types } from "mongoose";
+
 export interface ParkingLot {
     _id?: string
     pid?: string
