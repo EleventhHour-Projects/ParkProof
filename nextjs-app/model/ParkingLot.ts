@@ -21,6 +21,39 @@ const ParkingLotSchema = new Schema<ParkingLot>(
       required: true,
       min: 0,
     },
+    lng: {
+      type: Number,
+      required: true,
+    },
+
+    lat: {
+      type: Number,
+      required: true,
+    },
+
+    hasEVCharger: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+
+    occupied: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+    },
+
+    contractorPhone: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+    pid:{
+      type:String,
+      required:true,
+      unique:true
+    }
   },
   {
     timestamps: false, 

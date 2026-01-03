@@ -10,5 +10,6 @@ export interface Report {
   _id?: string;
   parkingLotId: Types.ObjectId;
   type: ReportType;
+  reportedBy:string
   createdAt?: Date;
 }
