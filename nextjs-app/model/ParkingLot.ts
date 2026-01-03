@@ -55,11 +55,6 @@ const ParkingLotSchema = new Schema<ParkingLot>(
       required: false,
       trim: true,
     },
-    pid:{
-      type:String,
-      required:true,
-      unique:true
-    }
   },
   {
     timestamps: false,
