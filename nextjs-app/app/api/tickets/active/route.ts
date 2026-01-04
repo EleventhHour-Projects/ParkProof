@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
                     vehicle_type: vehicleTypeMap[ticket.vehicleType] || 'CAR',
                 };
 
-                const qrRes = await fetch('http://localhost:8000/internal/vehicleqr', {
+                const qrRes = await fetch('https://parkproof.onrender.com/internal/vehicleqr', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload),
