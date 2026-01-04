@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 
@@ -69,6 +69,7 @@ export default function UserDashboard() {
   const dropdownRef = useRef<HTMLDivElement | null>(null)
   const router = useRouter()
 
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
   /* Fetch vehicles */
   useEffect(() => {
     mockFetchVehicles().then(data => {
@@ -77,7 +78,7 @@ export default function UserDashboard() {
     })
   }, [])
 
-  const fetchTicketStatus = async (vehicleNumber: string) => {
+  const fetchTicketStatus = useCallback(async (vehicleNumber: string) => {
     try {
       const res = await fetch(`/api/tickets/active?vehicleNumber=${vehicleNumber}`)
       const data = await res.json()
@@ -127,20 +128,27 @@ export default function UserDashboard() {
       console.error("Failed to fetch ticket status", error)
       setHasTicket(false)
     }
-  }
+  }, [])
+
 
   /* Fetch ticket when vehicle changes */
   useEffect(() => {
-    if (!selectedVehicle) return
-    fetchTicketStatus(selectedVehicle.number)
+      if (!selectedVehicle) return
 
-    // Poll every 30 seconds to keep updated
-    const pollInterval = setInterval(() => {
-      if (selectedVehicle) fetchTicketStatus(selectedVehicle.number)
-    }, 1500)
+      const timeoutId = setTimeout(() => {
+        fetchTicketStatus(selectedVehicle.number)
+      }, 0)
 
-    return () => clearInterval(pollInterval)
-  }, [selectedVehicle])
+      const pollInterval = setInterval(() => {
+        fetchTicketStatus(selectedVehicle.number)
+      }, 30000)
+
+      return () => {
+        clearTimeout(timeoutId)
+        clearInterval(pollInterval)
+      }
+    }, [selectedVehicle, fetchTicketStatus])
+
 
   /* Close dropdown */
   useEffect(() => {
@@ -153,7 +161,7 @@ export default function UserDashboard() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
+  
 
   // Timer Logic
   useEffect(() => {
