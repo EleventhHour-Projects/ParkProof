@@ -137,7 +137,7 @@ export default function UserDashboard() {
     // Poll every 30 seconds to keep updated
     const pollInterval = setInterval(() => {
       if (selectedVehicle) fetchTicketStatus(selectedVehicle.number)
-    }, 150000)
+    }, 1500)
 
     return () => clearInterval(pollInterval)
   }, [selectedVehicle])
