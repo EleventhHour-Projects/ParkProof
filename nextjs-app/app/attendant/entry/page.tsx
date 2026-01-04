@@ -91,7 +91,6 @@ const QRCodeScanner = ({
         <video
             ref={videoRef}
             className="w-full h-full object-cover rounded-[2rem]"
-            style={{ transform: "scaleX(-1)" }}
         />
     );
 };
