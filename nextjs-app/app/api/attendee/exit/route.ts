@@ -54,7 +54,8 @@ export async function POST(req: NextRequest) {
     const {
       ticketId,      // pre-booked QR
       userId,        // profile QR
-      vehicleNumber  // manual / printed ticket
+      vehicleNumber,  // manual / printed ticket
+      action         // "verify" or undefined (default to close)
     } = await req.json();
 
     const now = new Date();
@@ -129,10 +130,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // ---------------------------------------------------------
+    // VERIFY ACTION (Read-Only)
+    // ---------------------------------------------------------
+    if (action === "verify") {
+      // Calc Fee: Base 20 + 10/hr
+      const durationMs = now.getTime() - new Date(session.entryTime).getTime();
+      const durationHours = Math.ceil(durationMs / (1000 * 60 * 60));
+      const amount = 20 + (durationHours * 10);
+
+      return NextResponse.json({
+        success: true,
+        vehicleNumber: session.vehicleNumber,
+        entryTime: session.entryTime,
+        amountDue: amount
+      });
+    }
+
+    // ---------------------------------------------------------
+    // CLOSE SESSION (Default)
+    // ---------------------------------------------------------
+
     // Close session
     session.exitTime = now;
     session.status = "CLOSED";
     await session.save();
+
+    // Expire the ticket so it can't be reused or stay in limbo
+    await TicketModel.updateMany(
+      { vehicleNumber: session.vehicleNumber, status: "USED" },
+      { status: "EXPIRED" }
+    );
 
     // TODO: Call Go API here (fire-and-forget)
     // notifyGoExit(session)
