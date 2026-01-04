@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { BrowserQRCodeReader } from "@zxing/browser";
 import {
     FaArrowLeft,
     FaPrint,
     FaParking,
+    FaCheckCircle,
+    FaTimes,
 } from "react-icons/fa";
 import { MdOutlineConfirmationNumber, MdOutlineQrCodeScanner, MdQrCodeScanner } from "react-icons/md";
 import { BsLightningChargeFill } from "react-icons/bs";
@@ -28,65 +30,70 @@ interface VehicleQRCodeData {
 }
 
 // ----------------------------------------------------------------------
-// Scanner Component (Robust)
+// Scanner Component using ZXing
 // ----------------------------------------------------------------------
 
 const QRCodeScanner = ({
     onScanSuccess,
-    onScanFailure,
+    isScanning,
 }: {
     onScanSuccess: (decodedText: string) => void;
-    onScanFailure?: (error: any) => void;
+    isScanning: boolean;
 }) => {
-    const scannerRef = useRef<Html5QrcodeScanner | null>(null);
-    const onScanSuccessRef = useRef(onScanSuccess);
-    const onScanFailureRef = useRef(onScanFailure);
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
+    const [isMounted, setIsMounted] = useState(false);
+    const scanLockRef = useRef(false);
 
-    // Keep refs updated to avoid re-initialization
+    // Ensure we're on client side
     useEffect(() => {
-        onScanSuccessRef.current = onScanSuccess;
-        onScanFailureRef.current = onScanFailure;
-    }, [onScanSuccess, onScanFailure]);
+        setIsMounted(true);
+    }, []);
 
     useEffect(() => {
-        // Safety cleanup before init
-        if (scannerRef.current) {
-            scannerRef.current.clear().catch(console.error);
-        }
+        if (!isScanning || !isMounted) return;
 
-        const scanner = new Html5QrcodeScanner(
-            "reader",
-            {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
-                supportedScanTypes: [] // Default to camera
-            },
-            false
-        );
+        // Reset lock when scanner restarts
+        scanLockRef.current = false;
 
-        scannerRef.current = scanner;
+        const codeReader = new BrowserQRCodeReader();
+        codeReaderRef.current = codeReader;
 
-        scanner.render(
-            (decodedText) => {
-                if (onScanSuccessRef.current) onScanSuccessRef.current(decodedText);
-            },
-            (error) => {
-                if (onScanFailureRef.current) onScanFailureRef.current(error);
-            }
-        );
+        codeReader
+            .decodeFromVideoDevice(undefined, videoRef.current!, (result, error) => {
+                if (result && !scanLockRef.current) {
+                    scanLockRef.current = true;
+                    onScanSuccess(result.getText());
+                }
+            })
+            .catch((err) => {
+                console.error("QR Scanner Error:", err);
+            });
 
         return () => {
-            if (scannerRef.current) {
-                scannerRef.current.clear().catch((error) => {
-                    console.error("Failed to clear html5-qrcode scanner. ", error);
-                });
-                scannerRef.current = null;
+            // Properly stop the video stream
+            if (videoRef.current && videoRef.current.srcObject) {
+                const stream = videoRef.current.srcObject as MediaStream;
+                stream.getTracks().forEach(track => track.stop());
             }
         };
-    }, []); // MOUNT ONCE
+    }, [isScanning, isMounted, onScanSuccess]);
 
-    return <div id="reader" className="w-full h-full rounded-[2rem] overflow-hidden bg-black shadow-inner" />;
+    if (!isMounted) {
+        return (
+            <div className="w-full h-full flex items-center justify-center bg-slate-900 rounded-[2rem]">
+                <div className="text-white text-sm">Initializing camera...</div>
+            </div>
+        );
+    }
+
+    return (
+        <video
+            ref={videoRef}
+            className="w-full h-full object-cover rounded-[2rem]"
+            style={{ transform: "scaleX(-1)" }}
+        />
+    );
 };
 
 // ----------------------------------------------------------------------
@@ -105,6 +112,10 @@ export default function AttendantEntryPage() {
     const [scanStatus, setScanStatus] = useState<"IDLE" | "SUCCESS" | "ERROR">("IDLE");
     const [scanMessage, setScanMessage] = useState("");
 
+    // Confirmation State
+    const [pendingEntry, setPendingEntry] = useState<VehicleQRCodeData | null>(null);
+    const [isScanning, setIsScanning] = useState(true);
+
     useEffect(() => {
         const mockData = {
             _id: "mock_id_for_plid0001",
@@ -118,8 +129,10 @@ export default function AttendantEntryPage() {
         setLoading(false);
     }, []);
 
-    // Handler for QR Scan
+    // Handler for QR Scan - Now just stores data, doesn't process entry
     const handleScanSuccess = async (decodedText: string) => {
+        if (!isScanning || pendingEntry) return;
+
         try {
             const parsed: VehicleQRCodeData = JSON.parse(decodedText);
 
@@ -127,58 +140,111 @@ export default function AttendantEntryPage() {
                 throw new Error("Invalid QR Data");
             }
 
-            setLastScannedData(parsed);
-            setScanStatus("SUCCESS");
-
-            await validateAndEnter(parsed);
-            await enterVehicle(parsed);
+            // Stop scanning and show confirmation
+            setIsScanning(false);
+            setPendingEntry(parsed);
+            setScanStatus("IDLE");
 
         } catch (e) {
             console.error("Scan Parse Error", e);
             setScanMessage("Invalid QR Code");
             setScanStatus("ERROR");
+            toast.error("Invalid QR Code");
         }
     };
 
-    const enterVehicle = async (data: VehicleQRCodeData) => {
+    // New handler for confirming entry
+    const handleConfirmEntry = async () => {
+        if (!pendingEntry) return;
+
         try {
+            setScanStatus("IDLE");
+            setScanMessage("");
+
+            // Validate ticket
+            const validateRes = await fetch(`/api/ticket/validate?ticketId=${pendingEntry.ticket_id}`);
+            const valData = await validateRes.json();
+
+            if (!validateRes.ok || !valData.valid) {
+                setScanMessage(`Invalid: ${valData.reason || "Unknown"}`);
+                setScanStatus("ERROR");
+                toast.error(`Invalid: ${valData.reason || "Unknown"}`);
+
+                // Clear pending and resume scanning after showing error
+                setTimeout(() => {
+                    setPendingEntry(null);
+                    setIsScanning(true);
+                    setScanStatus("IDLE");
+                    setScanMessage("");
+                    setPendingEntry(null);
+                }, 2000);
+                return;
+            }
+
+            // Process entry
             const enterRes = await fetch(`/api/attendee/entry`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ticketId: data.ticket_id }),
+                body: JSON.stringify({ ticketId: pendingEntry.ticket_id }),
             });
             const enterData = await enterRes.json();
 
             if (!enterRes.ok) {
                 setScanMessage(`Error: ${enterData.message}`);
                 setScanStatus("ERROR");
+                toast.error(`Error: ${enterData.message}`);
+
+                // Clear pending and resume scanning after showing error
+                setTimeout(() => {
+                    setPendingEntry(null);
+                    setIsScanning(true);
+                    setScanStatus("IDLE");
+                    setScanMessage("");
+                    setPendingEntry(null);
+                }, 2000);
                 return;
             }
 
-            setScanMessage(`Vehicle Entered: ${data.vehicle}`);
+            setScanMessage(`Vehicle Entered: ${pendingEntry.vehicle}`);
+            setScanStatus("SUCCESS");
+            toast.success(`Vehicle Entered: ${pendingEntry.vehicle}`);
+
+            // Clear pending and resume scanning after delay
+            setTimeout(() => {
+                setPendingEntry(null);
+                setIsScanning(true);
+                setScanStatus("IDLE");
+            }, 2000);
+
         } catch (e) {
             setScanMessage("Network Error");
             setScanStatus("ERROR");
+            toast.error("Network Error");
+
+            // Clear pending and resume scanning after showing error
+            setTimeout(() => {
+                setPendingEntry(null);
+                setIsScanning(true);
+                setScanStatus("IDLE");
+                setScanMessage("");
+            }, 2000);
         }
     };
 
-    const validateAndEnter = async (data: VehicleQRCodeData) => {
-        try {
-            const validateRes = await fetch(`/api/ticket/validate?ticketId=${data.ticket_id}`);
-            const valData = await validateRes.json();
+    // Handler to cancel and rescan
+    const handleCancelScan = () => {
+        setScanStatus("IDLE");
+        setScanMessage("");
+        setPendingEntry(null);
 
-            if (!validateRes.ok || !valData.valid) {
-                setScanMessage(`Invalid: ${valData.reason || "Unknown"}`);
-                setScanStatus("ERROR");
-                return;
-            }
+        // 🔁 force clean restart
+        setIsScanning(false);
 
-            setScanMessage(`Allowed: ${data.vehicle}`);
-        } catch (e) {
-            setScanMessage("Network Error");
-            setScanStatus("ERROR");
-        }
+        requestAnimationFrame(() => {
+            setIsScanning(true);
+        });
     };
+
 
     const handleManualPrint = async () => {
         if (!attendantData?.parkingLot?.pid || !vehicleNumber) {
@@ -305,36 +371,88 @@ export default function AttendantEntryPage() {
                     {activeMode === "SCAN" ? (
                         <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
 
-                            {/* New QR Scanner Design */}
-                            <div className="relative w-full aspect-square bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl ring-4 ring-white border border-slate-800 group">
-                                <QRCodeScanner onScanSuccess={handleScanSuccess} />
+                            {/* Conditional: Show Scanner or Confirmation */}
+                            {!pendingEntry ? (
+                                <>
+                                    {/* QR Scanner */}
+                                    <div className="relative w-full aspect-square bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl ring-4 ring-white border border-slate-800 group">
+                                        <QRCodeScanner onScanSuccess={handleScanSuccess} isScanning={isScanning} />
 
-                                {/* HUD Overlay */}
-                                <div className="absolute inset-0 pointer-events-none">
-                                    {/* Dark Vignette */}
-                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.8)_100%)]"></div>
+                                        {/* HUD Overlay */}
+                                        <div className="absolute inset-0 pointer-events-none">
+                                            {/* Dark Vignette */}
+                                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.8)_100%)]"></div>
 
-                                    {/* Center Focus Frame */}
-                                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 border border-white/20 rounded-[1.5rem] backdrop-blur-[1px]">
-                                        {/* Animated Corner Brackets */}
-                                        <div className="absolute top-0 left-0 w-8 h-8 border-t-[4px] border-l-[4px] border-blue-500 rounded-tl-2xl shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
-                                        <div className="absolute top-0 right-0 w-8 h-8 border-t-[4px] border-r-[4px] border-blue-500 rounded-tr-2xl shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
-                                        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-[4px] border-l-[4px] border-blue-500 rounded-bl-2xl shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
-                                        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-[4px] border-r-[4px] border-blue-500 rounded-br-2xl shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
+                                            {/* Center Focus Frame */}
+                                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 border border-white/20 rounded-[1.5rem] backdrop-blur-[1px]">
+                                                {/* Animated Corner Brackets */}
+                                                <div className="absolute top-0 left-0 w-8 h-8 border-t-[4px] border-l-[4px] border-blue-500 rounded-tl-2xl shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
+                                                <div className="absolute top-0 right-0 w-8 h-8 border-t-[4px] border-r-[4px] border-blue-500 rounded-tr-2xl shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
+                                                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-[4px] border-l-[4px] border-blue-500 rounded-bl-2xl shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
+                                                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-[4px] border-r-[4px] border-blue-500 rounded-br-2xl shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
 
-                                        {/* Scanning Laser Line */}
-                                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-blue-400 to-transparent shadow-[0_0_20px_rgba(96,165,250,0.8)] animate-[scan_2s_ease-in-out_infinite]"></div>
+                                                {/* Scanning Laser Line */}
+                                                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-blue-400 to-transparent shadow-[0_0_20px_rgba(96,165,250,0.8)] animate-[scan_2s_ease-in-out_infinite]"></div>
+                                            </div>
+
+                                            {/* Status Text */}
+                                            <div className="absolute bottom-10 left-0 right-0 text-center">
+                                                <span className="inline-flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 text-[10px] font-bold text-blue-400 tracking-widest uppercase shadow-lg">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                                                    Active Scanner
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
+                                </>
+                            ) : (
+                                <>
+                                    {/* Confirmation Card */}
+                                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-[2.5rem] p-8 shadow-2xl border-2 border-blue-200 animate-in zoom-in-95 duration-300">
+                                        <div className="text-center mb-6">
+                                            <div className="w-20 h-20 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+                                                <MdQrCodeScanner className="text-4xl text-white" />
+                                            </div>
+                                            <h2 className="text-2xl font-extrabold text-slate-800 mb-2">QR Code Scanned</h2>
+                                            <p className="text-sm text-slate-500 font-medium">Verify vehicle details below</p>
+                                        </div>
 
-                                    {/* Status Text */}
-                                    <div className="absolute bottom-10 left-0 right-0 text-center">
-                                        <span className="inline-flex items-center gap-2 bg-slate-900/80 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/10 text-[10px] font-bold text-blue-400 tracking-widest uppercase shadow-lg">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                                            Active Scanner
-                                        </span>
+                                        {/* Vehicle Details */}
+                                        <div className="bg-white rounded-3xl p-6 mb-6 shadow-inner border border-blue-100">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Vehicle Number</span>
+                                                <span className="text-xs font-bold text-blue-600 uppercase">{pendingEntry.vehicle_type}</span>
+                                            </div>
+                                            <div className="text-center">
+                                                <div className="text-4xl font-black text-slate-900 tracking-wider mb-2 font-mono">
+                                                    {pendingEntry.vehicle}
+                                                </div>
+                                                <div className="text-xs text-slate-400 font-medium">
+                                                    Ticket ID: {pendingEntry.ticket_id.slice(0, 8)}...
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Action Buttons */}
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <button
+                                                onClick={handleCancelScan}
+                                                className="bg-white border-2 border-slate-200 text-slate-700 py-4 rounded-[1.5rem] font-bold text-sm shadow-md hover:shadow-lg hover:border-slate-300 transition-all flex items-center justify-center gap-2 group active:scale-95"
+                                            >
+                                                <FaTimes className="text-lg text-slate-400 group-hover:text-red-500 transition-colors" />
+                                                <span>Cancel</span>
+                                            </button>
+                                            <button
+                                                onClick={handleConfirmEntry}
+                                                className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-4 rounded-[1.5rem] font-bold text-sm shadow-xl hover:shadow-2xl hover:from-blue-700 hover:to-indigo-700 transition-all flex items-center justify-center gap-2 group active:scale-95"
+                                            >
+                                                <FaCheckCircle className="text-lg" />
+                                                <span>Confirm Entry</span>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
+                                </>
+                            )}
 
                             {/* Result Card */}
                             {scanStatus !== "IDLE" && (
