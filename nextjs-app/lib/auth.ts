@@ -1,12 +1,14 @@
 import { NextRequest } from "next/server";
-import jwt from "jsonwebtoken";
+import { jwtVerify } from "jose";
 
-export function verifySession(req: NextRequest) {
+export async function verifySession(req: NextRequest) {
   const token = req.cookies.get("session")?.value;
   if (!token) return null;
 
   try {
-    return jwt.verify(token, process.env.JWT_SECRET!) as {
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const { payload } = await jwtVerify(token, secret);
+    return payload as {
       userId: string;
       role: "PARKER" | "ATTENDANT" | "ADMIN";
     };

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 /* =======================
    TYPES
@@ -131,23 +132,42 @@ export default function UserDashboard() {
   }, [])
 
 
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
+
+      // redirect to login
+      toast.success('Logged out successfully')
+      router.replace('/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Logout failed')
+    }
+  };
+
   /* Fetch ticket when vehicle changes */
   useEffect(() => {
-      if (!selectedVehicle) return
+    if (!selectedVehicle) return
 
-      const timeoutId = setTimeout(() => {
-        fetchTicketStatus(selectedVehicle.number)
-      }, 0)
+    const timeoutId = setTimeout(() => {
+      fetchTicketStatus(selectedVehicle.number)
+    }, 0)
 
-      const pollInterval = setInterval(() => {
-        fetchTicketStatus(selectedVehicle.number)
-      }, 30000)
+    const pollInterval = setInterval(() => {
+      fetchTicketStatus(selectedVehicle.number)
+    }, 30000)
 
-      return () => {
-        clearTimeout(timeoutId)
-        clearInterval(pollInterval)
-      }
-    }, [selectedVehicle, fetchTicketStatus])
+    return () => {
+      clearTimeout(timeoutId)
+      clearInterval(pollInterval)
+    }
+  }, [selectedVehicle, fetchTicketStatus])
 
 
   /* Close dropdown */
@@ -161,7 +181,7 @@ export default function UserDashboard() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  
+
 
   // Timer Logic
   useEffect(() => {
@@ -220,7 +240,9 @@ export default function UserDashboard() {
           Dashboard
         </h1>
 
-        <button className="bg-[#FFA640] text-white px-6 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-orange-200 hover:shadow-xl hover:bg-[#ff9922] transition-all active:scale-95">
+        <button className="bg-[#FFA640] text-white px-6 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-orange-200 hover:shadow-xl hover:bg-[#ff9922] transition-all active:scale-95"
+          onClick={handleLogout}
+        >
           Logout
         </button>
       </div>
