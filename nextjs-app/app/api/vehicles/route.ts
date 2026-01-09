@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
         await dbConnect();
 
         // 1. Verify Authentication
-        const session = verifySession(req);
+        const session = await verifySession(req);
         if (!session) {
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         }
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
         await dbConnect();
 
         // 1. Verify Authentication
-        const session = verifySession(req);
+        const session = await verifySession(req);
         if (!session) {
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         }
