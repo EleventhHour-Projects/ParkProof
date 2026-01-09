@@ -1,41 +1,67 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "./lib/auth";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const session = await verifySession(request); // { role } | null
+
+  // ========================
+  // LOGIN PAGE GUARDS
+  // ========================
+
+  if (session) {
+    if (pathname === "/login" && session.role === "PARKER") {
+      return NextResponse.redirect(new URL("/user", request.url));
+    }
+
+    if (
+      pathname === "/attendant/login" &&
+      session.role === "ATTENDANT"
+    ) {
+      return NextResponse.redirect(new URL("/attendant", request.url));
+    }
+
+    if (pathname === "/admin/login" && session.role === "ADMIN") {
+      return NextResponse.redirect(new URL("/admin", request.url));
+    }
+  }
+
+  // ========================
+  // PROTECTED ROUTES
+  // ========================
+
+  if (pathname.startsWith("/user")) {
+    if (!session || session.role !== "PARKER") {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+
+  if (pathname.startsWith("/attendant")) {
+    if (!session || session.role !== "ATTENDANT") {
+      return NextResponse.redirect(
+        new URL("/attendant/login", request.url)
+      );
+    }
+  }
+
+  if (pathname.startsWith("/admin")) {
+    if (!session || session.role !== "ADMIN") {
+      return NextResponse.redirect(
+        new URL("/admin/login", request.url)
+      );
+    }
+  }
+
   return NextResponse.next();
-
-  // const { pathname } = request.nextUrl;
-  // const session = verifySession(request); // { role } | null
-
-  // // ---- USER (PARKER) ----
-  // if (pathname.startsWith("/user")) {
-  //   if (!session || session.role !== "PARKER") {
-  //     return NextResponse.redirect(
-  //       new URL("/login", request.url)
-  //     );
-  //   }
-  // }
-
-  // // ---- ATTENDANT ----
-  // if (pathname.startsWith("/attendant")) {
-  //   if (!session || session.role !== "ATTENDANT") {
-  //     return NextResponse.redirect(
-  //       new URL("/attendant/login", request.url)
-  //     );
-  //   }
-  // }
-
-  // // ---- ADMIN ----
-  // if (pathname.startsWith("/admin")) {
-  //   if (!session || session.role !== "ADMIN") {
-  //     return NextResponse.redirect(
-  //       new URL("/admin/login", request.url)
-  //     );
-  //   }
-  // }
 }
 
-// export const config = {
-//   matcher: ["/user/:path*", "/attendant/:path*", "/admin/:path*"],
-// };
-
+export const config = {
+  matcher: [
+    "/login",
+    "/user/:path*",
+    "/attendant/:path*",
+    "/attendant/login",
+    "/admin/:path*",
+    "/admin/login",
+  ],
+};

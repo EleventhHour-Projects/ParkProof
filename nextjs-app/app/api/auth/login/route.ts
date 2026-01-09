@@ -13,11 +13,11 @@ export async function POST(req: NextRequest) {
 
     if (!phone || !password) {
       return NextResponse.json(
-        { message: "Phone and password are required" },
+        { message: "Phone and Password are required" },
         { status: 400 }
       );
     }
- 
+
     // find user : password is select:false, so explicitly include 
     const user = await UserModel.findOne({ phone }).select("+password");
 
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
       },
       process.env.JWT_SECRET!,
       {
-        expiresIn: "7d", 
+        expiresIn: "7d",
       }
     );
 
