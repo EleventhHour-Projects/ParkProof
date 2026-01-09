@@ -1,4 +1,5 @@
-export interface Vehicle{
-    vehicleNumber : string,
-    _id? : string
+export interface Vehicle {
+    vehicleNumber: string,
+    userId?: string,
+    _id?: string
 }

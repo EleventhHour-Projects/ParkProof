@@ -11,9 +11,15 @@ const VehicleSchema = new Schema<Vehicle>(
       uppercase: true, // recommended for number plates
       index: true,
     },
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: false,
+      index: true,
+    },
   },
   {
-    timestamps: false, 
+    timestamps: false,
   }
 );
 
