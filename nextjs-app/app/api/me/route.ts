@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifySession } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-    const session = verifySession(req);
+    const session = await verifySession(req);
 
     if (!session) {
         return NextResponse.json(
