@@ -14,6 +14,12 @@ type QRCodeRequest struct {
 	VehicleType internal.VehicleTypeEnum `json:"vehicle_type"`
 }
 
+type UserQRRequest struct {
+	Vehicle     string                   `json:"vehicle"`
+	VehicleType internal.VehicleTypeEnum `json:"vehicle_type"`
+	Username    string                   `json:"username"`
+}
+
 func GetVehicleQR(c *fiber.Ctx) error {
 	var d QRCodeRequest
 	c.BodyParser(&d)
@@ -28,6 +34,28 @@ func GetVehicleQR(c *fiber.Ctx) error {
 	fmt.Println(data)
 
 	png, err := internal.QRCode(data)
+	if err != nil {
+		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
+	}
+
+	c.Set("Content-Type", "image/png")
+	c.Set("Content-Disposition", "inline; filename=parking_qr.png")
+	fmt.Println("Send QR")
+	return c.Send(png)
+}
+
+func GetUserProfileQR(c *fiber.Ctx) error {
+	var d UserQRRequest
+	c.BodyParser(&d)
+	data := internal.UserQRCodeData{
+		Type:        "user",
+		Vehicle:     d.Vehicle,
+		VehicleType: d.VehicleType,
+		Username:    d.Username,
+	}
+	fmt.Println(data)
+
+	png, err := internal.QRCodeUser(data)
 	if err != nil {
 		return fiber.NewError(fiber.StatusInternalServerError, err.Error())
 	}

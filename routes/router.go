@@ -30,7 +30,8 @@ func Router() {
 	app.Post("/api/admin/query", api.SendQuery) // New Query by Admin
 
 	// QR Code Routes
-	app.Post("/internal/vehicleqr", api.GetVehicleQR) // Give QR Code for Vehicle
+	app.Post("/internal/vehicleqr", api.GetVehicleQR)  // Give QR Code for Vehicle
+	app.Post("/internal/userqr", api.GetUserProfileQR) // GIve User QR code
 
 	log.Fatal(app.Listen(":8000"))
 }
