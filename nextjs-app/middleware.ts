@@ -18,11 +18,11 @@ export async function middleware(request: NextRequest) {
       pathname === "/attendant/login" &&
       session.role === "ATTENDANT"
     ) {
-      return NextResponse.redirect(new URL("/attendant", request.url));
+      return NextResponse.redirect(new URL("/attendant/dashboard", request.url));
     }
 
     if (pathname === "/admin/login" && session.role === "ADMIN") {
-      return NextResponse.redirect(new URL("/admin", request.url));
+      return NextResponse.redirect(new URL("/admin/dashboard", request.url));
     }
   }
 
@@ -36,7 +36,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (pathname.startsWith("/attendant")) {
+  if (pathname.startsWith("/attendant") && pathname !== "/attendant/login") {
     if (!session || session.role !== "ATTENDANT") {
       return NextResponse.redirect(
         new URL("/attendant/login", request.url)
@@ -44,7 +44,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (pathname.startsWith("/admin")) {
+  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
     if (!session || session.role !== "ADMIN") {
       return NextResponse.redirect(
         new URL("/admin/login", request.url)
