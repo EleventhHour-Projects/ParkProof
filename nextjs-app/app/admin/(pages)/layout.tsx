@@ -2,9 +2,24 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const router = useRouter();
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+      if (!response.ok) throw new Error('Logout failed');
+      toast.success('Logged out successfully')
+      router.replace('/login');
+    } catch (error) {
+      toast.error('Logout failed')
+    }
+  };
   return (
     <div className="min-h-screen bg-white font-['Manrope',sans-serif]">
       {/* NAVBAR (paste your nav JSX here unchanged) */}
@@ -51,7 +66,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
 
             {/* Logout Button */}
-            <button className="hidden sm:block bg-amber-500 text-white px-5 py-2 text-xs font-light tracking-wide transition-all duration-300 hover:bg-amber-600 active:scale-95 cursor-pointer">
+            <button onClick={handleLogout} className="hidden sm:block bg-amber-500 text-white px-5 py-2 text-xs font-light tracking-wide transition-all duration-300 hover:bg-amber-600 active:scale-95 cursor-pointer">
               Logout
             </button>
           </div>

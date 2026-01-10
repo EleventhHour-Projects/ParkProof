@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import DigiIndiaLogo from "@/internal/assets/DigitalIndiaLogo.svg";
 import Image from "next/image";
 
 
@@ -171,10 +170,10 @@ const LoginPage = () => {
           Admin Login
         </Link>
         <Link
-          href="/attendee/login"
+          href="/attendant/login"
           className="flex-1 bg-orange-400 hover:bg-orange-500 text-white text-center font-bold py-3 rounded-full shadow-lg transition-all transform hover:scale-[1.02] text-sm"
         >
-          Attendee Login
+          Attendant Login
         </Link>
       </div>
 
