@@ -282,16 +282,34 @@ export default function AttendantEntryPage() {
                     vehicleNumber: vehicleNumber,
                     vehicleType: vehicleType,
                     amount: vehicleType === '2w' ? 10 : 20,
+                    manualEntry: true
                 })
             });
 
             if (!bookRes.ok) throw new Error("Booking Failed");
 
+            const contentType = bookRes.headers.get("content-type");
+
+            if (contentType && contentType.includes("application/pdf")) {
+                const blob = await bookRes.blob();
+                const url = window.URL.createObjectURL(blob);
+                const printWindow = window.open(url);
+                if (printWindow) {
+                    printWindow.onload = () => {
+                        printWindow.print();
+                    };
+                }
+                setScanMessage(`Ticket Printed: ${vehicleNumber}`);
+            } else {
+                // Fallback to JSON
+                setScanMessage(`Ticket Generated: ${vehicleNumber}`);
+            }
+
             setScanStatus("SUCCESS");
-            setScanMessage(`Ticket: ${vehicleNumber}`);
             setVehicleNumber("");
 
         } catch (e: any) {
+            console.error(e);
             setScanMessage("Booking Failed");
             setScanStatus("ERROR");
         }
@@ -518,9 +536,7 @@ export default function AttendantEntryPage() {
 
                             {/* Input Field */}
                             <div className="bg-white p-2.5 rounded-[2rem] shadow-sm border border-slate-100 flex items-center group focus-within:ring-4 focus-within:ring-slate-100 transition-all">
-                                <div className="w-14 h-14 bg-slate-50 rounded-[1.5rem] flex items-center justify-center text-slate-400 group-focus-within:bg-slate-900 group-focus-within:text-white transition-colors duration-300 shadow-inner">
-                                    <span className="font-bold text-lg">DL</span>
-                                </div>
+
                                 <input
                                     type="text"
                                     value={vehicleNumber}
