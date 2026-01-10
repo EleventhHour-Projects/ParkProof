@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json([], { status: 200 });
     }
 
-    const parkingLotIds = reports.map(r => r.parkingLotId);
+    const parkingLotIds = reports.map(r => r.parkingLotId).filter((id): id is any => !!id);
 
     const parkingLots = await ParkingLotModel.find({
       _id: { $in: parkingLotIds },
@@ -27,16 +27,17 @@ export async function GET(req: NextRequest) {
     );
 
     const response = reports.map((report, index) => {
-      const lot = lotMap.get(report.parkingLotId.toString());
+      const lotId = report.parkingLotId?.toString();
+      const lot = lotId ? lotMap.get(lotId) : undefined;
 
       return {
         sno: index + 1,
         reportId: report._id,
         parkingLotId: report.parkingLotId,
-        parkingLotName: lot?.pid ?? lot?.name ?? "Unknown",
+        parkingLotName: lot?.pid ?? lot?.name ?? "General / Unknown",
 
         issueType: report.type,
-        reportedBy: report.reportedBy ?? "N/A",
+        reportedBy: report.userId ? report.userId.toString() : "Anonymous",
 
         contractorPhone: lot?.contractorPhone ?? "N/A",
 
