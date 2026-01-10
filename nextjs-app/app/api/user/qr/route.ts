@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
         }
 
         // 5. Call Go Backend
-        const backendUrl = "http://localhost:8000/internal/userqr";
+        const backendUrl = "https://parkproof.onrender.com/internal/userqr";
         const payload = {
             vehicle: vehicleNumber,
             vehicle_type: vehicleType,
