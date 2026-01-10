@@ -299,9 +299,11 @@ export default function AttendantEntryPage() {
                     };
                 }
                 setScanMessage(`Ticket Printed: ${vehicleNumber}`);
+                toast.success(`Ticket Printed: ${vehicleNumber}`);
             } else {
                 // Fallback to JSON
                 setScanMessage(`Ticket Generated: ${vehicleNumber}`);
+                toast.success(`Ticket Generated: ${vehicleNumber}`);
             }
 
             setScanStatus("SUCCESS");
