@@ -4,20 +4,22 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import Link from 'next/link'
 
 /* =======================
    TYPES
 ======================= */
 
 type Vehicle = {
-  id: number
+  _id: string
   number: string
-  model: string
+  model: string // Now maps to 'name' from DB
   icon: string
+  type: '2w' | '3w' | '4w'
 }
 
 type TicketStatus = {
-  vehicleId: number
+  vehicleId: string
   active: boolean
 }
 
@@ -40,22 +42,6 @@ type TicketDetails = {
 
 
 /* =======================
-   MOCK API
-======================= */
-
-const mockFetchVehicles = (): Promise<Vehicle[]> =>
-  new Promise(resolve =>
-    setTimeout(() => {
-      resolve([
-        { id: 1, number: 'DL 53EF 5438', model: 'BMW M4', icon: '/car.png' },
-        { id: 2, number: 'DL 01AB 1122', model: 'Santa Sleigh', icon: '/sleigh.png' },
-        { id: 3, number: 'DL 09XY 7788', model: 'Bike', icon: '/bike.png' },
-      ])
-    }, 300)
-  )
-
-
-/* =======================
    COMPONENT
 ======================= */
 
@@ -71,13 +57,105 @@ export default function UserDashboard() {
   const router = useRouter()
 
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null)
+
+  // Add Vehicle State
+  const [isAddingVehicle, setIsAddingVehicle] = useState(false)
+  const [newVehicleNumber, setNewVehicleNumber] = useState('')
+  const [newVehicleName, setNewVehicleName] = useState('')
+  const [newVehicleType, setNewVehicleType] = useState<'2w' | '3w' | '4w'>('4w')
+  const [isSubmittingVehicle, setIsSubmittingVehicle] = useState(false)
+
+
   /* Fetch vehicles */
+  const fetchVehicles = useCallback(async () => {
+    try {
+      const res = await fetch('/api/vehicles')
+      if (res.ok) {
+        const data = await res.json()
+        const mappedVehicles: Vehicle[] = data.map((v: any) => ({
+          _id: v._id,
+          number: v.vehicleNumber,
+          model: v.name || 'Unknown Model',
+          type: v.type || '4w',
+          icon: (v.type === '2w' || v.type === 'bike') ? '/bike.png' : '/car.png' // Simple icon mapping
+        }))
+        setVehicles(mappedVehicles)
+
+        // Auto-select logic
+        if (mappedVehicles.length > 0 && !selectedVehicle) {
+          const stored = localStorage.getItem('lastSelectedVehicle')
+          const found = mappedVehicles.find(v => v._id === stored)
+          setSelectedVehicle(found || mappedVehicles[0])
+        } else if (mappedVehicles.length > 0 && selectedVehicle) {
+          const stillExists = mappedVehicles.find(v => v._id === selectedVehicle._id)
+          if (!stillExists) setSelectedVehicle(mappedVehicles[0])
+          else setSelectedVehicle(stillExists) // Update details if changed
+        }
+      }
+    } catch (e) {
+      console.error("Failed to fetch vehicles", e)
+    }
+  }, [selectedVehicle])
+
   useEffect(() => {
-    mockFetchVehicles().then(data => {
-      setVehicles(data)
-      setSelectedVehicle(data[0])
-    })
+    fetchVehicles()
   }, [])
+
+  /* Add Vehicle */
+  const handleAddVehicle = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newVehicleNumber.trim()) {
+      toast.error("Vehicle Number is required")
+      return
+    }
+    if (!newVehicleName.trim()) {
+      toast.error("Vehicle Name is required")
+      return
+    }
+
+    try {
+      setIsSubmittingVehicle(true)
+      const res = await fetch('/api/vehicles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vehicleNumber: newVehicleNumber,
+          name: newVehicleName,
+          type: newVehicleType
+        })
+      })
+
+      const data = await res.json()
+
+      if (res.ok) {
+        toast.success("Vehicle added successfully")
+        setNewVehicleNumber('')
+        setNewVehicleName('')
+        setNewVehicleType('4w') // Reset to default
+        setIsAddingVehicle(false)
+        await fetchVehicles()
+
+        // Select new vehicle
+        const newVehicle: Vehicle = {
+          _id: data._id,
+          number: data.vehicleNumber,
+          model: data.name,
+          type: data.type,
+          icon: data.type === '2w' ? '/bike.png' : '/car.png'
+        }
+        setSelectedVehicle(newVehicle)
+        setOpen(false)
+      } else {
+        toast.error(data.message || "Failed to add vehicle")
+      }
+    } catch (error) {
+      console.error("Add vehicle error", error)
+      toast.error("Something went wrong")
+    } finally {
+      setIsSubmittingVehicle(false)
+    }
+  }
+
 
   const fetchTicketStatus = useCallback(async (vehicleNumber: string) => {
     try {
@@ -94,16 +172,14 @@ export default function UserDashboard() {
         let remaining = 0;
 
         if (data.status === 'RESERVED') {
-          // For RESERVED, show time left to enter (validTill - now)
           remaining = Math.max(0, Math.floor((validTill.getTime() - Date.now()) / 1000))
         } else {
-          // For PARKED, show elapsed time (now - entryTime)
           remaining = Math.floor((Date.now() - entryTime.getTime()) / 1000)
         }
 
 
         setTicketDetails({
-          qrImage: data.qrCode || './qr.png', // Use API provided QR or fallback
+          qrImage: data.qrCode || './qr.png',
           status: data.status,
           entryTime: entryTime.toLocaleString('en-IN', { dateStyle: 'short', timeStyle: 'short' }),
           remainingSeconds: remaining,
@@ -111,7 +187,7 @@ export default function UserDashboard() {
             name: data.parkingLot.name,
             addressLine1: data.parkingLot.address,
             addressLine2: data.parkingLot.area,
-            ratePerHour: data.ticket ? data.ticket.amount : 20, // Fallback rate
+            ratePerHour: data.ticket ? data.ticket.amount : 20,
           },
           billing: {
             currentAmount: data.ticket ? data.ticket.amount : 0,
@@ -137,32 +213,23 @@ export default function UserDashboard() {
       const response = await fetch('/api/auth/logout', {
         method: 'POST',
       });
-
-      if (!response.ok) {
-        throw new Error('Logout failed');
-      }
-
-      // redirect to login
+      if (!response.ok) throw new Error('Logout failed');
       toast.success('Logged out successfully')
       router.replace('/login');
     } catch (error) {
-      console.error('Logout error:', error);
       toast.error('Logout failed')
     }
   };
 
-  /* Fetch ticket when vehicle changes */
   useEffect(() => {
     if (!selectedVehicle) return
-
+    localStorage.setItem('lastSelectedVehicle', selectedVehicle._id)
     const timeoutId = setTimeout(() => {
       fetchTicketStatus(selectedVehicle.number)
     }, 0)
-
     const pollInterval = setInterval(() => {
       fetchTicketStatus(selectedVehicle.number)
     }, 30000)
-
     return () => {
       clearTimeout(timeoutId)
       clearInterval(pollInterval)
@@ -170,11 +237,12 @@ export default function UserDashboard() {
   }, [selectedVehicle, fetchTicketStatus])
 
 
-  /* Close dropdown */
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setOpen(false)
+        // Keep adding state if user just clicked outside? Maybe reset it
+        // setIsAddingVehicle(false) 
       }
     }
     document.addEventListener('mousedown', handler)
@@ -183,39 +251,24 @@ export default function UserDashboard() {
 
 
 
-  // Timer Logic
   useEffect(() => {
     if (remainingSeconds === null || !ticketDetails) return
-
     const interval = setInterval(() => {
       setRemainingSeconds(prev => {
         if (prev === null) return null
-
-        if (ticketDetails.status === 'PARKED') {
-          // Elapsed time increases
-          return prev + 1
-        } else {
-          // Reserved time decreases
-          return prev > 0 ? prev - 1 : 0
-        }
+        if (ticketDetails.status === 'PARKED') return prev + 1
+        return prev > 0 ? prev - 1 : 0
       })
     }, 1000)
-
     return () => clearInterval(interval)
-  }, [ticketDetails?.status]) // Re-run if status changes
+  }, [ticketDetails?.status])
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600)
     const m = Math.floor((seconds % 3600) / 60)
     const s = seconds % 60
-
-    return `${h.toString().padStart(2, '0')}:${m
-      .toString()
-      .padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   }
-
-
-  if (!selectedVehicle) return null
 
 
   return (
@@ -224,25 +277,14 @@ export default function UserDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between pt-8 pb-4 px-6 sticky top-0 bg-[#F4F4F4]/80 backdrop-blur-md z-40">
         <button className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-slate-100 hover:shadow-md transition-all active:scale-95">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2.5}
-            className="w-5 h-5 text-gray-700"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-5 h-5 text-gray-700">
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h7" />
           </svg>
         </button>
 
-        <h1 className="text-xl font-bold text-slate-800">
-          Dashboard
-        </h1>
+        <h1 className="text-xl font-bold text-slate-800">Dashboard</h1>
 
-        <button className="bg-[#FFA640] text-white px-6 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-orange-200 hover:shadow-xl hover:bg-[#ff9922] transition-all active:scale-95"
-          onClick={handleLogout}
-        >
+        <button className="bg-[#FFA640] text-white px-6 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-orange-200 hover:shadow-xl hover:bg-[#ff9922] transition-all active:scale-95" onClick={handleLogout}>
           Logout
         </button>
       </div>
@@ -255,28 +297,24 @@ export default function UserDashboard() {
             onClick={() => setOpen(!open)}
             className="w-full rounded-[1.5rem] px-5 py-4 flex items-center gap-4 bg-white shadow-sm border border-slate-100 transition-all hover:shadow-md active:scale-[0.99]"
           >
-            <div className="relative w-10 h-10 shrink-0">
-              <Image src={selectedVehicle.icon} alt="Vehicle" fill className="object-contain" />
-            </div>
-
-            <div className="flex-1 text-left">
-              <div className="text-base font-bold text-slate-900">
-                {selectedVehicle.number}
+            {selectedVehicle ? (
+              <>
+                <div className="relative w-10 h-10 shrink-0">
+                  <Image src={selectedVehicle.icon} alt="Vehicle" fill className="object-contain" />
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="text-base font-bold text-slate-900">{selectedVehicle.number}</div>
+                  <div className="text-xs font-medium text-slate-500 uppercase tracking-wide">{selectedVehicle.model}</div>
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 text-left font-bold text-slate-500">
+                {vehicles.length === 0 ? "Add a Vehicle" : "Select Vehicle"}
               </div>
-              <div className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                {selectedVehicle.model}
-              </div>
-            </div>
+            )}
 
             <div className={`w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center transition-transform duration-300 ${open ? 'rotate-180 bg-slate-100' : ''}`}>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2.5}
-                className="w-4 h-4 text-slate-400"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4 text-slate-400">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
             </div>
@@ -291,49 +329,129 @@ export default function UserDashboard() {
           >
             {vehicles.map(v => (
               <button
-                key={v.id}
+                key={v._id}
                 onClick={() => {
                   setSelectedVehicle(v)
                   setOpen(false)
                 }}
                 className={`w-full px-5 py-4 flex items-center gap-4 hover:bg-slate-50 transition-colors border-b last:border-0 border-slate-50
-                    ${selectedVehicle.id === v.id ? 'bg-slate-50' : ''}
+                    ${selectedVehicle?._id === v._id ? 'bg-slate-50' : ''}
                 `}
               >
                 <div className="relative w-8 h-8 shrink-0 opacity-80">
                   <Image src={v.icon} alt="Vehicle" fill className="object-contain" />
                 </div>
                 <div className="text-left">
-                  <div className={`text-sm font-bold ${selectedVehicle.id === v.id ? 'text-slate-900' : 'text-slate-600'}`}>{v.number}</div>
+                  <div className={`text-sm font-bold ${selectedVehicle?._id === v._id ? 'text-slate-900' : 'text-slate-600'}`}>{v.number}</div>
                   <div className="text-[10px] font-medium text-slate-400 uppercase tracking-wide">{v.model}</div>
                 </div>
-                {selectedVehicle.id === v.id && (
+                {selectedVehicle?._id === v._id && (
                   <div className="ml-auto w-2 h-2 rounded-full bg-green-500" />
                 )}
               </button>
             ))}
+
+            {/* Add Vehicle Option */}
+            <div className="p-4 bg-slate-50 flex flex-col gap-2">
+              {!isAddingVehicle ? (
+                <button
+                  onClick={() => setIsAddingVehicle(true)}
+                  className="w-full py-3 rounded-xl border border-dashed border-slate-300 text-slate-500 font-bold text-sm hover:bg-slate-100 hover:border-slate-400 transition-all flex items-center justify-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                  Add New Vehicle
+                </button>
+              ) : (
+                <form onSubmit={handleAddVehicle} className="flex flex-col gap-3 p-2">
+                  <input
+                    type="text"
+                    placeholder="Vehicle Number (e.g. DL01AB1234)"
+                    className="w-full px-4 py-2 rounded-xl text-sm border border-slate-200 focus:outline-none focus:border-blue-500 uppercase"
+                    value={newVehicleNumber}
+                    onChange={(e) => setNewVehicleNumber(e.target.value.toUpperCase())}
+                    autoFocus
+                    required
+                  />
+                  <input
+                    type="text"
+                    placeholder="Vehicle Name (e.g. Honda City)"
+                    className="w-full px-4 py-2 rounded-xl text-sm border border-slate-200 focus:outline-none focus:border-blue-500"
+                    value={newVehicleName}
+                    onChange={(e) => setNewVehicleName(e.target.value)}
+                    required
+                  />
+                  <div className="flex gap-2">
+                    {['4w', '2w', '3w'].map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setNewVehicleType(type as any)}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold border ${newVehicleType === type ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50'}`}
+                      >
+                        {type === '4w' ? 'Car' : type === '2w' ? 'Bike' : 'Auto'}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingVehicle(false)}
+                      className="flex-1 py-2 rounded-xl text-xs font-bold text-slate-500 hover:bg-slate-100"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmittingVehicle}
+                      className="flex-1 bg-blue-600 text-white py-2 rounded-xl font-bold text-xs disabled:opacity-50"
+                    >
+                      {isSubmittingVehicle ? 'Saving...' : 'Add Vehicle'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+
           </div>
         </div>
 
         {/* USER QR */}
-        {!hasTicket && (
+        {!hasTicket && selectedVehicle && (
           <div className="bg-white rounded-[2.5rem] p-8 text-center shadow-lg shadow-gray-200/50 border border-white">
             <div className="relative mb-6">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Scan to Park</div>
               <div className="p-4 bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-slate-50 inline-block">
-                <Image src="/qr.png" alt="QR" width={200} height={200} className="" />
+                <Image
+                  src={`/api/user/qr?vehicle=${encodeURIComponent(selectedVehicle.number)}&type=${encodeURIComponent(selectedVehicle.type)}`}
+                  alt="QR"
+                  width={200}
+                  height={200}
+                  unoptimized={true}
+                  className=""
+                />
               </div>
             </div>
 
             <div className="flex flex-col items-center gap-2">
               <h2 className="text-xl font-bold text-slate-800">Ready to Park?</h2>
               <p className="text-xs text-slate-500 max-w-[200px] leading-relaxed">
-                Show this QR code to the parking assistant for quick entry.
+                Show this QR code to the parking assistant for quick entry with {selectedVehicle.number}.
               </p>
             </div>
           </div>
         )}
 
+        {/* NO VEHICLE STATE */}
+        {!selectedVehicle && (
+          <div className="bg-white rounded-[2.5rem] p-8 text-center shadow-lg shadow-gray-200/50 border border-white">
+            <div className="text-slate-400 mb-4">
+              <svg className="w-16 h-16 mx-auto opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 14c1.49-1.46 3-3.21 3-5.5A7.5 7.5 0 1022 17.5v-1.95m-9 3a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </div>
+            <h3 className="font-bold text-lg text-slate-800">No Vehicle Selected</h3>
+            <p className="text-gray-500 text-sm mt-2">Please add or select a vehicle to generate your QR code.</p>
+          </div>
+        )}
+
+        {/* TICKET / ACTIONS / FOOTER ... (Same as before) */}
         {/* TICKET */}
         {hasTicket && ticketDetails && (
           <div className="bg-white rounded-[2.5rem] p-6 shadow-xl shadow-blue-900/5 border border-slate-100 relative overflow-hidden">
