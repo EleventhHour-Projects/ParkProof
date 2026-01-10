@@ -9,6 +9,8 @@ import (
 )
 
 var queryCollection *mongo.Collection
+var ticketCollection *mongo.Collection
+var parkingLotCollection *mongo.Collection
 
 func MongoDB() {
 	uri := "fsaf"
@@ -23,4 +25,8 @@ func MongoDB() {
 	}
 	coll := client.Database("parkproof_db").Collection("queries")
 	queryCollection = coll
+	coll = client.Database("parkproof_db").Collection("tickets")
+	ticketCollection = coll
+	coll = client.Database("parkproof_db").Collection("parkingLots")
+	parkingLotCollection = coll
 }
