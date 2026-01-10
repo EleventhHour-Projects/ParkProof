@@ -11,7 +11,7 @@ export interface AdminParkingLot {
   capacity: number;
   occupied: number;
   occupancyPercent: number;
-
+  contractorPhone?: string;
   riskScore: number;
   riskLevel: RiskLevel;
   riskReason: string | null;

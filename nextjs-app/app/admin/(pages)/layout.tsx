@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner'
+import Link from 'next/link';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -51,7 +52,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Parking Lots
+                <Link href="/admin/parking-lots">Parking Lots</Link>
               </button>
               <button
                 onClick={() => setActiveTab('reports')}
@@ -61,7 +62,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                Reports
+                <Link href="/admin/reports">Reports</Link>
               </button>
             </div>
 

@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
         capacity,
         occupied,
         occupancyPercent,
-
+        contractorPhone: lot?.contractorPhone ?? "9818091234",
         riskScore,
         riskLevel,
         riskReason: risk.reason ?? null,
