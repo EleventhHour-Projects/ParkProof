@@ -116,16 +116,37 @@ export default function AttendantEntryPage() {
     const [isScanning, setIsScanning] = useState(true);
 
     useEffect(() => {
-        const mockData = {
-            _id: "mock_id_for_plid0001",
-            pid: "PLID0001",
-            name: "MCD Rohini",
-            address: "Sector 14, Near Metro Station",
-            capacity: 120,
-            occupied: 45,
+        const fetchData = async () => {
+            try {
+                // 1. Fetch User to get ParkingLot ID
+                const meRes = await fetch('/api/me');
+                if (meRes.status === 401) {
+                    return;
+                }
+                const meData = await meRes.json();
+
+                if (meData.parkingLotId) {
+                    // 2. Fetch Parking Lot Details
+                    const lotRes = await fetch(`/api/parking/${meData.parkingLotId}`);
+                    const lotData = await lotRes.json();
+
+                    if (lotData.success) {
+                        setAttendantData({ parkingLot: lotData.data });
+                    } else {
+                        toast.error("Failed to load parking lot details");
+                    }
+                } else {
+                    toast.error("No parking lot assigned to this attendant");
+                }
+            } catch (error) {
+                console.error("Entry Page Load Error", error);
+                toast.error("Failed to load data");
+            } finally {
+                setLoading(false);
+            }
         };
-        setAttendantData({ parkingLot: mockData });
-        setLoading(false);
+
+        fetchData();
     }, []);
 
     // Handler for QR Scan - Now just stores data, doesn't process entry
@@ -260,7 +281,7 @@ export default function AttendantEntryPage() {
                     parkingLotId: attendantData.parkingLot.pid,
                     vehicleNumber: vehicleNumber,
                     vehicleType: vehicleType,
-                    amount: 20,
+                    amount: vehicleType === '2w' ? 10 : 20,
                 })
             });
 
@@ -321,8 +342,9 @@ export default function AttendantEntryPage() {
                         <div className="text-right">
                             <div className="text-3xl font-extrabold text-blue-600 tabular-nums tracking-tighter loading-none drop-shadow-sm">
                                 {available}
+                                <span className="text-sm font-bold text-slate-300 ml-1">/{capacity}</span>
                             </div>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Available</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Slots Available</span>
                         </div>
                     </div>
 
