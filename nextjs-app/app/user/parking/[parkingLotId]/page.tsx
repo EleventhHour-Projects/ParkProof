@@ -532,7 +532,9 @@ export default function SelectedParkingLotPage() {
 
         {/* Actions */}
         <div className="mt-2 space-y-4">
-          <button className="w-full bg-[#E05A4F] text-white py-4 rounded-[2rem] text-xl font-bold shadow-lg shadow-red-200 hover:bg-[#d6453a] hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3">
+          <button
+            onClick={() => router.push(`/user/report?parkingLotId=${lot?._id}`)}
+            className="w-full bg-[#E05A4F] text-white py-4 rounded-[2rem] text-xl font-bold shadow-lg shadow-red-200 hover:bg-[#d6453a] hover:shadow-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-6 h-6 opacity-90">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
             </svg>
