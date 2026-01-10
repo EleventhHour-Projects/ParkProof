@@ -27,7 +27,8 @@ func Router() {
 	})
 
 	// Query Routes
-	app.Post("/api/admin/query", api.SendQuery) // New Query by Admin
+	app.Post("/api/admin/query", api.SendQuery)   // New Query by Admin
+	app.Get("/api/admin/queries", api.GetQueries) // Get Queries by Admin/Parking Lot
 
 	// QR Code Routes
 	app.Post("/internal/vehicleqr", api.GetVehicleQR)  // Give QR Code for Vehicle

@@ -40,3 +40,13 @@ func SendQuery(c *fiber.Ctx) error {
 	c.Status(200)
 	return c.JSON(map[string]string{"status": "done"})
 }
+
+func GetQueries(c *fiber.Ctx) error {
+	queries, err := database.GetQueryByParkingLot(c.Query("pid"))
+	if err != nil {
+		c.Status(400)
+		return c.JSON(map[string]string{"error": err.Error()})
+	}
+	c.Status(200)
+	return c.JSON(queries)
+}

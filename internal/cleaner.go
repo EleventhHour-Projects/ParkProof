@@ -7,6 +7,7 @@ import (
 )
 
 func Cleaner() {
+	log.Println("Cleaner started")
 	for {
 		tickets, err := database.GetAllTickets()
 		if err != nil {

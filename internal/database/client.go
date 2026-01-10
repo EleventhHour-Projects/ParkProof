@@ -12,8 +12,10 @@ var queryCollection *mongo.Collection
 var ticketCollection *mongo.Collection
 var parkingLotCollection *mongo.Collection
 
+var MongoDBURI string
+
 func MongoDB() {
-	uri := "fsaf"
+	uri := MongoDBURI
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	client, err := mongo.Connect(options.Client().ApplyURI(uri).SetServerAPIOptions(serverAPI))
 	if err != nil {
@@ -29,4 +31,5 @@ func MongoDB() {
 	ticketCollection = coll
 	coll = client.Database("parkproof_db").Collection("parkingLots")
 	parkingLotCollection = coll
+	log.Println("MongoDB connected")
 }
