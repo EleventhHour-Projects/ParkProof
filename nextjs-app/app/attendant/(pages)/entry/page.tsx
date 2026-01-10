@@ -23,10 +23,11 @@ type VehicleTypeEnum = "4w" | "2w" | "3w";
 
 interface VehicleQRCodeData {
     type: string;
-    ticket_id: string;
+    ticket_id?: string;
     vehicle: string;
-    parking_lot: string;
+    parking_lot?: string;
     vehicle_type: VehicleTypeEnum;
+    username?: string;
 }
 
 // ----------------------------------------------------------------------
@@ -156,7 +157,11 @@ export default function AttendantEntryPage() {
         try {
             const parsed: VehicleQRCodeData = JSON.parse(decodedText);
 
-            if (!parsed.ticket_id || !parsed.vehicle) {
+            // Check if it's a Valid Ticket QR OR a Valid User QR
+            const isTicket = parsed.ticket_id && parsed.vehicle;
+            const isUserQR = parsed.username && parsed.vehicle;
+
+            if (!isTicket && !isUserQR) {
                 throw new Error("Invalid QR Data");
             }
 
@@ -181,48 +186,41 @@ export default function AttendantEntryPage() {
             setScanStatus("IDLE");
             setScanMessage("");
 
-            // Validate ticket
-            const validateRes = await fetch(`/api/ticket/validate?ticketId=${pendingEntry.ticket_id}`);
-            const valData = await validateRes.json();
+            // --- CASE A: TICKET ENTRY ---
+            if (pendingEntry.ticket_id) {
+                // Validate ticket
+                const validateRes = await fetch(`/api/ticket/validate?ticketId=${pendingEntry.ticket_id}`);
+                const valData = await validateRes.json();
 
-            if (!validateRes.ok || !valData.valid) {
-                setScanMessage(`Invalid: ${valData.reason || "Unknown"}`);
-                setScanStatus("ERROR");
-                toast.error(`Invalid: ${valData.reason || "Unknown"}`);
+                if (!validateRes.ok || !valData.valid) {
+                    throw new Error(valData.reason || "Invalid Ticket");
+                }
 
-                // Clear pending and resume scanning after showing error
-                setTimeout(() => {
-                    setPendingEntry(null);
-                    setIsScanning(true);
-                    setScanStatus("IDLE");
-                    setScanMessage("");
-                    setPendingEntry(null);
-                }, 2000);
-                return;
+                // Process entry
+                const enterRes = await fetch(`/api/attendee/entry`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ticketId: pendingEntry.ticket_id }),
+                });
+                const enterData = await enterRes.json();
+
+                if (!enterRes.ok) throw new Error(enterData.message);
             }
+            // --- CASE B: USER PROFILE ENTRY ---
+            else if (pendingEntry.username) {
+                const enterRes = await fetch(`/api/attendee/entry`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        username: pendingEntry.username,
+                        vehicleNumber: pendingEntry.vehicle,
+                        vehicleType: pendingEntry.vehicle_type,
+                        parkingLotId: attendantData.parkingLot._id // Need ParkingLotID for this flow
+                    }),
+                });
+                const enterData = await enterRes.json();
 
-            // Process entry
-            const enterRes = await fetch(`/api/attendee/entry`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ticketId: pendingEntry.ticket_id }),
-            });
-            const enterData = await enterRes.json();
-
-            if (!enterRes.ok) {
-                setScanMessage(`Error: ${enterData.message}`);
-                setScanStatus("ERROR");
-                toast.error(`Error: ${enterData.message}`);
-
-                // Clear pending and resume scanning after showing error
-                setTimeout(() => {
-                    setPendingEntry(null);
-                    setIsScanning(true);
-                    setScanStatus("IDLE");
-                    setScanMessage("");
-                    setPendingEntry(null);
-                }, 2000);
-                return;
+                if (!enterRes.ok) throw new Error(enterData.message);
             }
 
             setScanMessage(`Vehicle Entered: ${pendingEntry.vehicle}`);
@@ -236,10 +234,11 @@ export default function AttendantEntryPage() {
                 setScanStatus("IDLE");
             }, 2000);
 
-        } catch (e) {
-            setScanMessage("Network Error");
+        } catch (e: any) {
+            const msg = e.message || "Entry Error";
+            setScanMessage(msg);
             setScanStatus("ERROR");
-            toast.error("Network Error");
+            toast.error(msg);
 
             // Clear pending and resume scanning after showing error
             setTimeout(() => {
@@ -467,7 +466,10 @@ export default function AttendantEntryPage() {
                                                     {pendingEntry.vehicle}
                                                 </div>
                                                 <div className="text-xs text-slate-400 font-medium">
-                                                    Ticket ID: {pendingEntry.ticket_id.slice(0, 8)}...
+                                                    {pendingEntry.ticket_id
+                                                        ? `Ticket ID: ${pendingEntry.ticket_id.slice(0, 8)}...`
+                                                        : `User Profile Entry`
+                                                    }
                                                 </div>
                                             </div>
                                         </div>

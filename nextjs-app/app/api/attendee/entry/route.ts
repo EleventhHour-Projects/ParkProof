@@ -16,13 +16,15 @@ export async function POST(req: NextRequest) {
       userId,          // profile QR
       parkingLotId,
       vehicleNumber,
+      username,        // User QR Phone
+      vehicleType      // From User QR
     } = await req.json();
 
     const now = new Date();
 
-    
+
     // CASE 1A: PRE-BOOKED TICKET (RESERVED ENTRY)
-    
+
     if (ticketId) {
       if (!Types.ObjectId.isValid(ticketId)) {
         return NextResponse.json({ message: "Invalid ticketId" }, { status: 400 });
@@ -80,9 +82,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-  
+
     // COMMON VALIDATION FOR NON-RESERVED FLOWS
-    
+
     if (!parkingLotId || !vehicleNumber) {
       return NextResponse.json(
         { message: "parkingLotId and vehicleNumber are required" },
@@ -137,34 +139,66 @@ export async function POST(req: NextRequest) {
       );
     }
 
-       // CASE 1B: USER PROFILE QR (REGISTERED, NO PRE-BOOK)
-    
-    if (userId) {
-      if (!Types.ObjectId.isValid(userId)) {
-        return NextResponse.json({ message: "Invalid userId" }, { status: 400 });
+    // CASE 1B: USER PROFILE QR (REGISTERED, NO PRE-BOOK)
+
+    // CASE 1B: USER PROFILE QR (REGISTERED, NO PRE-BOOK)
+    const userPhone = username || (userId ? null : null); // Fallback logic if needed
+
+    if (userPhone || userId) {
+      let user: any = null;
+
+      if (userId && Types.ObjectId.isValid(userId)) {
+        user = await UserModel.findById(userId);
+      } else if (userPhone) {
+        user = await UserModel.findOne({ phone: userPhone });
       }
 
-      const user = await UserModel.findById(userId);
       if (!user) {
         return NextResponse.json({ message: "User not found" }, { status: 404 });
       }
 
+      const normalizeVehicleType = (type: string) => {
+        if (!type) return '4w';
+        const t = type.toUpperCase();
+        if (t === 'CAR' || t === '4W') return '4w';
+        if (t === 'BIKE' || t === 'SCOOTER' || t === '2W') return '2w';
+        if (t === 'RICKSHAW' || t === 'AUTO' || t === '3W') return '3w';
+        return '4w';
+      };
+
+      // 1. Create Verified Ticket (So it shows in app)
+      const ticket = await TicketModel.create({
+        parkingLotId,
+        vehicleNumber: normalizedVehicle,
+        vehicleType: normalizeVehicleType(vehicleType),
+        amount: 0, // Pay at exit
+        status: "USED",
+        usedAt: now,
+        validTill: new Date(now.getTime() + 24 * 60 * 60 * 1000) // 24h fallback
+      });
+
+      // 2. Create Session
       const session = await ParkingSessionModel.create({
         parkingLotId,
         vehicleNumber: normalizedVehicle,
-        userId,
+        userId: user._id,
         entryTime: now,
         entryMethod: "QR",
         status: "ACTIVE",
       });
 
-      // TODO: Call Go API here
+      // 3. Update Occupancy
+      await ParkingLotModel.findByIdAndUpdate(
+        parkingLotId,
+        { $inc: { occupied: 1 } }
+      );
 
       return NextResponse.json(
         {
           sessionId: session._id,
           entryMethod: "QR",
           type: "PROFILE",
+          ticketId: ticket._id
         },
         { status: 201 }
       );
