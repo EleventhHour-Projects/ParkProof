@@ -7,6 +7,7 @@ import { toast } from 'sonner'
 import Image from 'next/image'
 
 // Types
+// Types
 type Vehicle = {
   _id: string;
   vehicleNumber: string;
@@ -16,9 +17,14 @@ type Vehicle = {
 }
 
 type Query = {
-  _id: string;
+  id: string; // from Go
+  query: string;
+  to_parking_lot: string;
+  response_required: boolean;
+  time: string;
+  with_in_time: number;
+  status: number; // 0 open, 1 replied
   type: string;
-  description: string;
 }
 
 export default function AttendantDashboard() {
@@ -28,13 +34,29 @@ export default function AttendantDashboard() {
   // Data State
   const [user, setUser] = useState<any>(null)
   const [parkingLot, setParkingLot] = useState<any>(null)
-  const [stats, setStats] = useState({ revenue: 0, parkedVehicles: [] as Vehicle[], queries: [] as Query[] })
+  const [stats, setStats] = useState({ revenue: 0, parkedVehicles: [] as Vehicle[] })
+  const [queries, setQueries] = useState<Query[]>([])
 
   // UI State
   const [filter, setFilter] = useState<'All' | '4w' | '2w'>('All')
   const [search, setSearch] = useState('')
   const [vehiclesExpanded, setVehiclesExpanded] = useState(true)
   const [queriesExpanded, setQueriesExpanded] = useState(true)
+
+  const fetchQueries = async () => {
+    try {
+      const res = await fetch('/api/attendant/queries');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          // Filter out closed queries if needed, for now show all
+          setQueries(data.reverse()); // Show newest first
+        }
+      }
+    } catch (e) {
+      console.error("Query Poll Error", e);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -62,6 +84,9 @@ export default function AttendantDashboard() {
           if (statsData.success) {
             setStats(statsData.data)
           }
+
+          // 3. Initial Query Fetch
+          fetchQueries();
         }
       } catch (error) {
         console.error("Dashboard load error", error)
@@ -73,6 +98,13 @@ export default function AttendantDashboard() {
 
     fetchData()
   }, [router])
+
+  // Polling Effect
+  useEffect(() => {
+    if (!parkingLot) return;
+    const interval = setInterval(fetchQueries, 10000); // Poll every 10s
+    return () => clearInterval(interval);
+  }, [parkingLot]);
 
   const handleLogout = async () => {
     try {
@@ -277,27 +309,39 @@ export default function AttendantDashboard() {
             className="flex items-center justify-between cursor-pointer group"
           >
             <div className="flex items-center gap-2">
-              <AlertTriangle className={`w-5 h-5 ${stats.queries.length > 0 ? 'text-orange-500 fill-orange-500/20' : 'text-slate-300'}`} />
+              <AlertTriangle className={`w-5 h-5 ${queries.length > 0 ? 'text-orange-500 fill-orange-500/20' : 'text-slate-300'}`} />
               <div>
                 <span className="font-bold text-slate-800 text-sm">Queries & Reports</span>
-                {stats.queries.length > 0 && <span className="ml-2 text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">{stats.queries.length} NEW</span>}
+                {queries.length > 0 && <span className="ml-2 text-[10px] bg-red-100 text-red-600 px-2 py-0.5 rounded-full font-bold">{queries.length} NEW</span>}
               </div>
             </div>
             <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-300 ${queriesExpanded ? 'rotate-180' : ''}`} />
           </div>
 
-          <div className={`transition-all duration-300 overflow-hidden ${queriesExpanded ? 'max-h-[300px] opacity-100 mt-4' : 'max-h-0 opacity-0 mt-0'}`}>
-            {stats.queries.length === 0 ? (
+          <div className={`transition-all duration-300 overflow-hidden ${queriesExpanded ? 'max-h-[300px] opacity-100 mt-4 overflow-y-auto' : 'max-h-0 opacity-0 mt-0'}`}>
+            {queries.length === 0 ? (
               <div className="text-center text-xs text-slate-400 py-2">No pending queries today. Good job!</div>
             ) : (
               <div className="space-y-3">
-                {stats.queries.map((q, i) => (
-                  <div key={q._id} className="bg-white p-3.5 rounded-xl text-sm shadow-sm border border-slate-100 flex gap-3">
-                    <div className="w-1 rounded-full bg-red-400 shrink-0"></div>
-                    <div>
-                      <div className="font-bold text-slate-800 text-xs mb-0.5 uppercase tracking-wide">{q.type}</div>
-                      <div className="text-slate-500 text-xs setting-relaxed leading-relaxed">{q.description || "No description provided."}</div>
+                {queries.map((q, i) => (
+                  <div key={q.id} className={`bg-white p-3.5 rounded-xl text-sm shadow-sm border border-slate-100 flex flex-col gap-2 ${q.response_required ? 'border-l-4 border-l-red-500' : ''}`}>
+                    <div className="flex justify-between items-start">
+                      <span className="font-bold text-slate-800 text-xs uppercase tracking-wide bg-slate-100 px-2 py-0.5 rounded-md">{q.type}</span>
+                      <span className="text-[10px] text-slate-400">{new Date(q.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
+                    <div className="text-slate-600 text-xs font-medium leading-relaxed">
+                      {q.query}
+                    </div>
+                    {q.response_required && (
+                      <div className="flex sm:flex-row flex-col gap-2 mt-1">
+                        <button className="flex-1 bg-blue-100 text-blue-700 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-200 transition-colors">
+                          Reply
+                        </button>
+                        <button className="flex-1 bg-green-100 text-green-700 py-1.5 rounded-lg text-xs font-bold hover:bg-green-200 transition-colors">
+                          Resolve
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
