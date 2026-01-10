@@ -1,14 +1,13 @@
-// app/admin/layout.tsx
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner'
 import Link from 'next/link';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const pathname = usePathname();
   const router = useRouter();
+
   const handleLogout = async () => {
     try {
       const response = await fetch('/api/auth/logout', {
@@ -21,6 +20,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       toast.error('Logout failed')
     }
   };
+
+  const isDashboard = pathname.startsWith('/admin/dashboard');
+  const isParking = pathname.startsWith('/admin/parking-lots');
+  const isReports = pathname.startsWith('/admin/reports');
+
   return (
     <div className="min-h-screen bg-white font-['Manrope',sans-serif]">
       {/* NAVBAR (paste your nav JSX here unchanged) */}
@@ -35,32 +39,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Nav Items */}
             <div className="flex items-center gap-6 sm:gap-10">
               <button
-                onClick={() => setActiveTab('dashboard')}
-                className={`text-xs sm:text-sm font-light tracking-wide transition-all duration-300 cursor-pointer active:scale-95 ${
-                  activeTab === 'dashboard'
+                className={`text-xs sm:text-sm font-light tracking-wide transition-all duration-300 cursor-pointer active:scale-95 ${isDashboard
                     ? 'text-blue-500 font-normal'
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
-                Dashboard
+                <Link href="/admin/dashboard">Dashboard</Link>
               </button>
               <button
-                onClick={() => setActiveTab('parking')}
-                className={`text-xs sm:text-sm font-light tracking-wide transition-all duration-300 cursor-pointer active:scale-95 ${
-                  activeTab === 'parking'
+                className={`text-xs sm:text-sm font-light tracking-wide transition-all duration-300 cursor-pointer active:scale-95 ${isParking
                     ? 'text-blue-500 font-normal'
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 <Link href="/admin/parking-lots">Parking Lots</Link>
               </button>
               <button
-                onClick={() => setActiveTab('reports')}
-                className={`text-xs sm:text-sm font-light tracking-wide transition-all duration-300 cursor-pointer active:scale-95 ${
-                  activeTab === 'reports'
-                    ? 'text-blue-500 font-normal'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
+                className={`text-xs sm:text-sm font-light tracking-wide transition-all duration-300 cursor-pointer active:scale-95 text-gray-600 hover:text-gray-900`}
               >
                 <Link href="/admin/reports">Reports</Link>
               </button>
@@ -73,7 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
 
           {/* Reports indicator */}
-          {activeTab === 'reports' && (
+          {isReports && (
             <div className="pb-3 text-xs text-red-500 font-light">
               +27 Reports Today
             </div>
