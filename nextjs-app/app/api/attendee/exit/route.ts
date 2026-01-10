@@ -4,6 +4,7 @@ import { Types } from "mongoose";
 import dbConnect from "@/lib/db/dbConnect";
 import TicketModel from "@/model/Tickets";
 import ParkingSessionModel from "@/model/ParkingSession";
+import ParkingLotModel from "@/model/ParkingLot";
 
 export async function GET(req: NextRequest) {
   try {
@@ -161,6 +162,11 @@ export async function POST(req: NextRequest) {
       { vehicleNumber: session.vehicleNumber, status: "USED" },
       { status: "EXPIRED" }
     );
+
+    // Decrement Occupancy
+    if (session.parkingLotId) {
+      await ParkingLotModel.findByIdAndUpdate(session.parkingLotId, { $inc: { occupied: -1 } });
+    }
 
     // TODO: Call Go API here (fire-and-forget)
     // notifyGoExit(session)
