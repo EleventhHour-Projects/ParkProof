@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { toast } from 'sonner'
 import { ArrowLeft, MapPin, Camera, Plus, X } from 'lucide-react'
 
-export default function ReportPage() {
+function ReportContent() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const paramLotId = searchParams?.get('parkingLotId')
@@ -35,9 +35,7 @@ export default function ReportPage() {
                         const found = data.data.find((l: any) => l._id === paramLotId)
                         if (found) setSelectedLotId(found._id)
                     } else if (data.data.length > 0) {
-                        // Optional: Auto-select the first one if none provided? 
-                        // Or keep empty to force user selection. Let's keep empty but maybe set first if user has no preference.
-                        // For now, let's leave it empty to prompt user.
+                        // Optional: Auto-select logic
                     }
                 }
             } catch (e) {
@@ -287,5 +285,13 @@ export default function ReportPage() {
 
             </div>
         </div>
+    )
+}
+
+export default function ReportPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F4F4F4]">Loading...</div>}>
+            <ReportContent />
+        </Suspense>
     )
 }
