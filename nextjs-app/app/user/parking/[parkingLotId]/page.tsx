@@ -203,7 +203,7 @@ export default function SelectedParkingLotPage() {
 
   const handleBooking = async () => {
     if (!selectedVehicle || !lot) {
-      alert("Please select a vehicle first")
+      toast.error("Please select a vehicle first")
       return
     }
 
@@ -224,14 +224,14 @@ export default function SelectedParkingLotPage() {
 
       const data = await response.json()
       if (data.success) {
-        alert("Booking Successful!")
+        toast.success("Booking Successful!")
         router.push('/user')
       } else {
-        alert(data.message || "Booking Failed")
+        toast.error(data.message || "Booking Failed")
       }
     } catch (error) {
       console.error("Booking failed", error)
-      alert("Something went wrong")
+      toast.error("Something went wrong")
     } finally {
       setLoading(false)
     }
