@@ -63,8 +63,8 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            
-            
+
+
           </div>
         </div>
       </section>
@@ -107,8 +107,8 @@ export default function Home() {
       {/* Footer */}
       <footer className="bg-[#1e40af] text-white py-12">
         <div className="max-w-7xl mx-auto px-6 flex flex-col items-center text-center">
-          <div className="flex items-center gap-6 mb-8 opacity-90">
-            <div className="h-16 w-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm p-2">
+          <div className="flex items-center mb-8 opacity-90">
+            <div className="h-48 w-48 rounded-2xl flex items-center justify-center p-2">
               {/* Placeholder for Digital India */}
               <Image
                 src="/assets/Emblem.svg"
@@ -118,7 +118,7 @@ export default function Home() {
                 className="object-contain"
               />
             </div>
-            <div className="h-16 w-32 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-sm p-2">
+            <div className="h-48 w-48 rounded-2xl flex items-center justify-center p-2">
               {/* Placeholder for Another Logo */}
               <Image
                 src="/assets/DigitalIndiaLogo.svg"
