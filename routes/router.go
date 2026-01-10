@@ -33,5 +33,8 @@ func Router() {
 	app.Post("/internal/vehicleqr", api.GetVehicleQR)  // Give QR Code for Vehicle
 	app.Post("/internal/userqr", api.GetUserProfileQR) // GIve User QR code
 
+	// Physical Ticket Routes
+	app.Post("/internal/physicalticket", api.GeneratePhysicalTicket)
+
 	log.Fatal(app.Listen(":8000"))
 }
