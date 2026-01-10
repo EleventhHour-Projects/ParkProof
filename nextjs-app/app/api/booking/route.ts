@@ -40,6 +40,12 @@ export async function POST(request: NextRequest) {
             status: "CREATED",
         });
 
+        // Update Parking Lot Occupancy
+        await ParkingLotModel.findByIdAndUpdate(
+            parkingLotId,
+            { $inc: { occupied: 1 } }
+        );
+
         return NextResponse.json(
             { success: true, message: "Ticket booked successfully", ticketId: newTicket._id },
             { status: 201 }
@@ -48,7 +54,7 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         console.error("Booking Error:", error);
         return NextResponse.json(
-            { success: false, message: "Failed to book ticket"},
+            { success: false, message: "Failed to book ticket" },
             { status: 500 }
         );
     }

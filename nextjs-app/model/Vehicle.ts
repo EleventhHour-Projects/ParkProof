@@ -17,11 +17,28 @@ const VehicleSchema = new Schema<Vehicle>(
       required: false,
       index: true,
     },
+    name: {
+      type: String,
+      required: false,
+      default: "Unknown Vehicle"
+    },
+    type: {
+      type: String,
+      enum: ['2w', '3w', '4w'],
+      default: '4w',
+      required: true
+    }
   },
   {
     timestamps: false,
   }
 );
+
+// Prevent Mongoose overwrite warning in development by deleting the model if it exists
+// This ensures that schema changes are applied during HMR
+if (process.env.NODE_ENV !== 'production' && models.Vehicle) {
+  delete models.Vehicle
+}
 
 const VehicleModel: Model<Vehicle> =
   models.Vehicle || mongoose.model<Vehicle>("Vehicle", VehicleSchema, "vehicles");

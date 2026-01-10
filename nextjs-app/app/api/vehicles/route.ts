@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
         }
 
         // 2. Parse Body
-        const { vehicleNumber } = await req.json();
+        const { vehicleNumber, name, type } = await req.json();
 
         if (!vehicleNumber) {
             return NextResponse.json(
@@ -24,6 +24,8 @@ export async function POST(req: NextRequest) {
         }
 
         const normalizedNumber = vehicleNumber.trim().toUpperCase();
+        const vehicleType = type || '4w';
+        const vehicleName = name || 'Unknown Vehicle';
 
         // 3. Check for existing vehicle
         const existingVehicle = await VehicleModel.findOne({
@@ -41,12 +43,18 @@ export async function POST(req: NextRequest) {
 
             // If vehicle exists and belongs to current user
             if (existingVehicle.userId && existingVehicle.userId.toString() === session.userId) {
-                return NextResponse.json(existingVehicle, { status: 200 }); // Idempotent success
+                // Optionally update details if provided
+                if (name) existingVehicle.name = name;
+                if (type) existingVehicle.type = type;
+                await existingVehicle.save();
+
+                return NextResponse.json(existingVehicle, { status: 200 });
             }
 
-            // If vehicle exists but has no user (e.g. from attendant entry), claim it? 
-            // For now, let's update it to belong to this user.
+            // If vehicle exists but has no user, claim it
             existingVehicle.userId = session.userId;
+            existingVehicle.name = vehicleName; // Update with provided name
+            existingVehicle.type = vehicleType; // Update with provided type
             await existingVehicle.save();
             return NextResponse.json(existingVehicle, { status: 200 });
         }
@@ -55,6 +63,8 @@ export async function POST(req: NextRequest) {
         const newVehicle = await VehicleModel.create({
             vehicleNumber: normalizedNumber,
             userId: session.userId,
+            name: vehicleName,
+            type: vehicleType
         });
 
         return NextResponse.json(newVehicle, { status: 201 });
