@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
 
         // 2. Call Go Backend
-        const goRes = await fetch("http://127.0.0.1:8000/api/attendant/query/reply", {
+        const goRes = await fetch("https://parkproof.onrender.com/api/attendant/query/reply", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",

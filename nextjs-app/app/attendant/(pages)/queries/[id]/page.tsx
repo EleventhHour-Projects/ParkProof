@@ -64,7 +64,7 @@ export default function ReplyPage() {
                         const upData = await upRes.json();
                         // Prepend backend URL if the path is relative and starts with /
                         if (upData.url && upData.url.startsWith('/')) {
-                            replyImage = `http://127.0.0.1:8000${upData.url}`;
+                            replyImage = `https://parkproof.onrender.com${upData.url}`;
                         } else {
                             replyImage = upData.url;
                         }

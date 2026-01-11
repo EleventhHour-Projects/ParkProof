@@ -11,7 +11,8 @@ export async function POST(req: NextRequest) {
         const formData = await req.formData();
 
         // Forward to Go Backend
-        const goRes = await fetch("http://127.0.0.1:8000/api/upload", {
+        // Use production URL
+        const goRes = await fetch("https://parkproof.onrender.com/api/upload", {
             method: "POST",
             body: formData, // fetch automatically sets Content-Type to multipart/form-data with boundary
         });
