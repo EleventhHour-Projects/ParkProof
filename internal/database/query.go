@@ -25,6 +25,9 @@ type Query struct {
 	WithInTime       int         `json:"with_in_time" bson:"with_in_time"`
 	Status           QueryStatus `json:"status" bson:"status"`
 	Type             string      `json:"type" bson:"type"`
+	Reply            string      `json:"reply" bson:"reply"`
+	ReplyImage       string      `json:"reply_image" bson:"reply_image"`
+	RepliedAt        time.Time   `json:"replied_at" bson:"replied_at"`
 }
 
 func AddQuery(q Query) error {
@@ -37,6 +40,21 @@ func AddQuery(q Query) error {
 
 	ctx := context.TODO()
 	_, err := queryCollection.InsertOne(ctx, q)
+	return err
+}
+
+func ReplyToQuery(id, reply, replyImage string) error {
+	ctx := context.TODO()
+	filter := bson.M{"id": id}
+	update := bson.M{
+		"$set": bson.M{
+			"reply":       reply,
+			"reply_image": replyImage,
+			"replied_at":  time.Now(),
+			"status":      QueryStatusAnswered,
+		},
+	}
+	_, err := queryCollection.UpdateOne(ctx, filter, update)
 	return err
 }
 

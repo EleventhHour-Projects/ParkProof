@@ -11,6 +11,7 @@ import (
 var queryCollection *mongo.Collection
 var ticketCollection *mongo.Collection
 var parkingLotCollection *mongo.Collection
+var imageCollection *mongo.Collection
 
 var MongoDBURI string
 
@@ -31,5 +32,7 @@ func MongoDB() {
 	ticketCollection = coll
 	coll = client.Database("parkproof_db").Collection("parkingLots")
 	parkingLotCollection = coll
+	coll = client.Database("parkproof_db").Collection("images")
+	imageCollection = coll
 	log.Println("MongoDB connected")
 }

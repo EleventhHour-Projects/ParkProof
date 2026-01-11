@@ -21,14 +21,19 @@ func Router() {
 		Format: "[${ip}]:${port} ${status} - ${method} ${path}\n",
 	}))
 
+	// Dynamic Image Serving (DB)
+	app.Get("/uploads/:filename", api.ServeImage)
+
 	app.Get("/metrics", monitor.New(monitor.Config{Title: "ParkProof Go Backend Monitor"}))
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.SendString("OK")
 	})
 
 	// Query Routes
-	app.Post("/api/admin/query", api.SendQuery)   // New Query by Admin
-	app.Get("/api/admin/queries", api.GetQueries) // Get Queries by Admin/Parking Lot
+	app.Post("/api/admin/query", api.SendQuery)            // New Query by Admin
+	app.Get("/api/admin/queries", api.GetQueries)          // Get Queries by Admin/Parking Lot
+	app.Post("/api/attendant/query/reply", api.ReplyQuery) // Reply to Query by Attendant
+	app.Post("/api/upload", api.UploadImage)               // Upload Image
 
 	// QR Code Routes
 	app.Post("/internal/vehicleqr", api.GetVehicleQR)  // Give QR Code for Vehicle

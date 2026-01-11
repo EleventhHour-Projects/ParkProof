@@ -12,6 +12,8 @@ export interface Query {
     status: 'ACTIVE' | 'EXPIRED' | 'ANSWERED';
     responseRequired: boolean;
     expiresAt?: Date;
+    reply?: string;
+    replyImage?: string;
 }
 
 interface ActiveQueryProps {
@@ -23,32 +25,32 @@ export const ActiveQuery: React.FC<ActiveQueryProps> = ({ query, onExpire }) => 
     const [timeLeft, setTimeLeft] = useState<number>(0);
 
     useEffect(() => {
-    if (query.status !== 'ACTIVE' || !query.expiresAt) return;
+        if (query.status !== 'ACTIVE' || !query.expiresAt) return;
 
-    const calculateTimeLeft = () => {
-        const now = new Date();
-        const diff = Math.ceil(
-            (query.expiresAt!.getTime() - now.getTime()) / 1000
-        );
-        return diff > 0 ? diff : 0;
-    };
+        const calculateTimeLeft = () => {
+            const now = new Date();
+            const diff = Math.ceil(
+                (query.expiresAt!.getTime() - now.getTime()) / 1000
+            );
+            return diff > 0 ? diff : 0;
+        };
 
-    const tick = () => {
-        const diff = calculateTimeLeft();
-        if (diff <= 0) {
-            onExpire(query);
-        } else {
-            setTimeLeft(diff);
-        }
-    };
+        const tick = () => {
+            const diff = calculateTimeLeft();
+            if (diff <= 0) {
+                onExpire(query);
+            } else {
+                setTimeLeft(diff);
+            }
+        };
 
-    // run once immediately
-    tick();
+        // run once immediately
+        tick();
 
-    const interval = setInterval(tick, 1000);
+        const interval = setInterval(tick, 1000);
 
-    return () => clearInterval(interval);
-}, [query.status, query.expiresAt, onExpire]);
+        return () => clearInterval(interval);
+    }, [query.status, query.expiresAt, onExpire]);
 
 
     const formatTime = (seconds: number) => {
@@ -106,12 +108,34 @@ export const PastQueries: React.FC<PastQueriesProps> = ({ queries }) => {
                                     {q.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {q.timestamp.toLocaleDateString()}
                                 </span>
                                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${q.status === 'EXPIRED' ? 'bg-red-50 text-red-600 border border-red-100' :
-                                        q.status === 'ANSWERED' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-gray-100 text-gray-600'
+                                    q.status === 'ANSWERED' ? 'bg-green-50 text-green-600 border border-green-100' : 'bg-gray-100 text-gray-600'
                                     }`}>
                                     {q.status}
                                 </span>
                             </div>
-                            <p className="text-sm text-gray-600 line-clamp-2">{q.message}</p>
+                            <p className="text-sm text-gray-600 line-clamp-2 mb-2">{q.message}</p>
+
+                            {/* Reply Section */}
+                            {q.status === 'ANSWERED' && (
+                                <div className="mt-2 bg-green-50/50 p-3 rounded-lg border border-green-100">
+                                    <div className="text-xs font-bold text-green-700 mb-1 flex items-center gap-1">
+                                        <CheckCircle className="w-3 h-3" />
+                                        Attendant Response
+                                    </div>
+                                    <p className="text-sm text-gray-700">{q.reply || "No text response"}</p>
+                                    {q.replyImage && (
+                                        <div className="mt-2">
+                                            <a href={q.replyImage} target="_blank" rel="noopener noreferrer" className="block w-fit">
+                                                <img
+                                                    src={q.replyImage}
+                                                    alt="Reply Attachment"
+                                                    className="h-20 w-auto rounded-lg border border-green-200 hover:opacity-90 transition-opacity"
+                                                />
+                                            </a>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -179,7 +203,7 @@ export const RaiseQueryForm: React.FC<{
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
                         {/* Placeholder Avatar */}
-                        <Image src="@/assets/profile-user-attendant.svg" alt="Attendant" className="w-full h-full object-cover" width={40} height={40}/>
+                        <Image src="@/assets/profile-user-attendant.svg" alt="Attendant" className="w-full h-full object-cover" width={40} height={40} />
                     </div>
                     <div>
                         <div className="text-sm font-medium text-gray-900">Ravi Yadav</div>
