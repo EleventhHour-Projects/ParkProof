@@ -61,6 +61,19 @@ func analyzeLot(id string) {
 	score += r3Score
 	factors = append(factors, r3Factors...)
 
+	// Factor in Previous Risk Score (25% decay/momentum)
+	prevRisk, err := database.GetRiskScore(id)
+	prevScore := 0
+	if err == nil {
+		prevScore = prevRisk.Score
+	}
+
+	historicalFactor := int(float64(prevScore) * 0.25)
+	if historicalFactor > 0 {
+		score += historicalFactor // Use score variable instead of ruleScore to match existing local var
+		factors = append(factors, "Historical risk factor contributing")
+	}
+
 	level := "LOW"
 	if score >= 50 {
 		level = "HIGH"
@@ -84,7 +97,7 @@ func analyzeLot(id string) {
 	}
 
 	// Save result for all lots to ensure visibility
-	log.Printf("Saving risk score for lot %s: %d (%s)", id, score, reason)
+	log.Printf("Saving risk score for lot %s: %d (Prev: %d) Reason: %s", id, score, prevScore, reason)
 
 	objID, err := bson.ObjectIDFromHex(id)
 	if err != nil {

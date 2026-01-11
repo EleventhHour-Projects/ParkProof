@@ -88,3 +88,19 @@ func SaveRiskScore(score RiskScore) error {
 	_, err := riskScoreCollection.UpdateOne(context.TODO(), filter, update, opts)
 	return err
 }
+
+// GetRiskScore returns the current risk score for a parking lot
+func GetRiskScore(parkingLotID string) (RiskScore, error) {
+	objID, err := bson.ObjectIDFromHex(parkingLotID)
+	if err != nil {
+		return RiskScore{}, err
+	}
+
+	var score RiskScore
+	filter := bson.D{{Key: "parkingLotId", Value: objID}}
+	err = riskScoreCollection.FindOne(context.TODO(), filter).Decode(&score)
+	if err != nil {
+		return RiskScore{}, err
+	}
+	return score, nil
+}
