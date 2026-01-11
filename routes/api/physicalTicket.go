@@ -3,6 +3,7 @@ package api
 import (
 	"app/internal"
 	"bytes"
+	"encoding/json"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -23,7 +24,11 @@ func GeneratePhysicalTicket(c *fiber.Ctx) error {
 	}
 
 	// Generate QR in memory
-	qrData := req.Vehicle + "|PLID" + req.ParkingLot
+	qrJson, err := json.Marshal(req)
+	if err != nil {
+		return err
+	}
+	qrData := string(qrJson)
 	qrPNG, err := qrcode.Encode(qrData, qrcode.Medium, 256)
 	if err != nil {
 		return err
