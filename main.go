@@ -3,6 +3,7 @@ package main
 import (
 	"app/internal"
 	"app/internal/database"
+	"app/internal/risk"
 	"app/routes"
 	"log"
 	"os"
@@ -29,5 +30,6 @@ func main() {
 	database.MongoDBURI = os.Getenv("MONGODB_URI")
 	database.MongoDB()
 	go internal.Cleaner()
+	risk.StartRiskAnalysisScheduler()
 	routes.Router()
 }

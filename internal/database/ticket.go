@@ -4,35 +4,34 @@ import (
 	"context"
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type Ticket struct {
-	ID            primitive.ObjectID `bson:"_id"`
-	ParkingLotID  primitive.ObjectID `bson:"parkingLotId"`
-	VehicleNumber string             `bson:"vehicleNumber"`
-	Status        string             `bson:"status"`
-	VehicleType   string             `bson:"vehicleType"`
-	Amount        int                `bson:"amount"`
-	ValidTill     time.Time          `bson:"validTill"`
-	CreatedAt     time.Time          `bson:"createdAt"`
-	UsedAt        time.Time          `bson:"usedAt,omitempty"`
+	ID            bson.ObjectID `bson:"_id"`
+	ParkingLotID  bson.ObjectID `bson:"parkingLotId"`
+	VehicleNumber string        `bson:"vehicleNumber"`
+	Status        string        `bson:"status"`
+	VehicleType   string        `bson:"vehicleType"`
+	Amount        int           `bson:"amount"`
+	ValidTill     time.Time     `bson:"validTill"`
+	CreatedAt     time.Time     `bson:"createdAt"`
+	UsedAt        time.Time     `bson:"usedAt,omitempty"`
 }
 
 type ParkingLot struct {
-	ID              primitive.ObjectID `bson:"_id,omitempty"`
-	PID             string             `bson:"pid,omitempty"`
-	Name            string             `bson:"name"`
-	Area            string             `bson:"area"`
-	Address         string             `bson:"address"`
-	Location        string             `bson:"location,omitempty"`
-	Capacity        int                `bson:"capacity"`
-	Lng             float64            `bson:"lng"`
-	Lat             float64            `bson:"lat"`
-	HasEVCharger    bool               `bson:"hasEVCharger,omitempty"`
-	Occupied        int                `bson:"occupied,omitempty"`
-	ContractorPhone string             `bson:"contractorPhone,omitempty"`
+	ID              bson.ObjectID `bson:"_id,omitempty"`
+	PID             string        `bson:"pid,omitempty"`
+	Name            string        `bson:"name"`
+	Area            string        `bson:"area"`
+	Address         string        `bson:"address"`
+	Location        string        `bson:"location,omitempty"`
+	Capacity        int           `bson:"capacity"`
+	Lng             float64       `bson:"lng"`
+	Lat             float64       `bson:"lat"`
+	HasEVCharger    bool          `bson:"hasEVCharger,omitempty"`
+	Occupied        int           `bson:"occupied,omitempty"`
+	ContractorPhone string        `bson:"contractorPhone,omitempty"`
 }
 
 func GetAllTickets() ([]Ticket, error) {
