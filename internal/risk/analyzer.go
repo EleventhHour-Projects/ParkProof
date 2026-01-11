@@ -161,6 +161,7 @@ func checkTrafficMismatch(id string) (int, []string) {
 		return 0, nil
 	}
 
+	// Case 1: Low Ticket Count (last 1 hour)
 	tickets, err := database.GetTicketsLastWindow(id, 1*time.Hour)
 	if err != nil {
 		log.Println("Error getting tickets for R2:", err)
@@ -171,6 +172,15 @@ func checkTrafficMismatch(id string) (int, []string) {
 	expectedTickets := 5 // Threshold for "Low Ticket Count"
 
 	if ticketCount < expectedTickets {
+		// Refine Case 2: Ticketing Stalled (Zero tickets in last 2 hours)
+		// We already checked 1 hour. If count is 0, let's check deeper.
+		if ticketCount == 0 {
+			longWindowTickets, err := database.GetTicketsLastWindow(id, 2*time.Hour)
+			if err == nil && len(longWindowTickets) == 0 {
+				return 60, []string{"R2: Ticketing Stalled + Persistent Congestion (Potential off-app parking)"}
+			}
+		}
+
 		return 40, []string{"R2: Traffic congestion with low ticket activity"}
 	}
 
