@@ -55,7 +55,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <Link href="/admin/parking-lots">Parking Lots</Link>
               </button>
               <button
-                className={`text-xs sm:text-sm font-light tracking-wide transition-all duration-300 cursor-pointer active:scale-95 text-gray-600 hover:text-gray-900`}
+                className={`text-xs sm:text-sm font-light tracking-wide transition-all duration-300 cursor-pointer active:scale-95 
+                ${isReports
+                    ? 'text-blue-500 font-normal'
+                    : 'text-gray-600 hover:text-gray-900'
+                  }
+                  `}
               >
                 <Link href="/admin/reports">Reports</Link>
               </button>
@@ -69,7 +74,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
           {/* Reports indicator */}
           {isReports && (
-            <div className="pb-3 text-xs text-red-500 font-light">
+            <div className="pb-3 ml-196  text-xs text-red-500 font-light">
               +27 Reports Today
             </div>
           )}
