@@ -12,6 +12,8 @@ var queryCollection *mongo.Collection
 var ticketCollection *mongo.Collection
 var parkingLotCollection *mongo.Collection
 var imageCollection *mongo.Collection
+var reportCollection *mongo.Collection
+var riskScoreCollection *mongo.Collection
 
 var MongoDBURI string
 
@@ -34,5 +36,9 @@ func MongoDB() {
 	parkingLotCollection = coll
 	coll = client.Database("parkproof_db").Collection("images")
 	imageCollection = coll
+	coll = client.Database("parkproof_db").Collection("reports")
+	reportCollection = coll
+	coll = client.Database("parkproof_db").Collection("riskScores")
+	riskScoreCollection = coll
 	log.Println("MongoDB connected")
 }
