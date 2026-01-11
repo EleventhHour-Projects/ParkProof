@@ -87,7 +87,7 @@ const AttendantLoginPage = () => {
               <input
                 type="text"
                 name="phone"
-                placeholder="Parking Lot Identification Number"
+                placeholder="Phone Number"
                 value={formData.phone}
                 onChange={handleChange}
                 required

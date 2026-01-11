@@ -75,9 +75,9 @@ func analyzeLot(id string) {
 	}
 
 	level := "LOW"
-	if score >= 50 {
+	if score >= 70 {
 		level = "HIGH"
-	} else if score >= 20 {
+	} else if score >= 30 {
 		level = "MEDIUM"
 	}
 
