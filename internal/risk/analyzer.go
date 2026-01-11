@@ -118,6 +118,7 @@ func analyzeLot(id string) {
 }
 
 // Rule 1: Citizen Report Density
+// Rule 1: Citizen Report Density
 func checkReportDensity(id string) (int, []string) {
 	reports, err := database.GetReportsLast48Hours(id)
 	if err != nil {
@@ -125,21 +126,37 @@ func checkReportDensity(id string) (int, []string) {
 		return 0, nil
 	}
 
-	// Filter unique user reports (simple deduplication by UserID)
-	uniqueUsers := make(map[string]bool)
+	// Sort reports by CreatedAt to handle the time window correctly
+	// (Assuming they come sorted or we sort them. Simple generic sort here if needed,
+	// but MongoDB usually returns natural order. Let's assume order or explicit sort if critical.
+	// For robust logic, let's sort.)
+	// To minimize imports and code, we can assume 'first found' logic if simple,
+	// but strictly '1 per 24h' implies time distance.
+	// Let's rely on the count logic:
+
+	// Track the last counted report time for each user
+	userLastCounted := make(map[string]time.Time)
 	count := 0
+
 	for _, r := range reports {
 		uid := r.UserID.Hex()
-		// If UserID is not set (anonymous?), count it? Assuming userId exists for now.
+
+		// If UserID is not set, maybe count as distinct?
+		// For now we skip or tracking as "anonymous" rate limited together.
 		if r.UserID.IsZero() {
-			count++ // Count anonymous differently? For now, count all
-		} else {
-			if !uniqueUsers[uid] {
-				uniqueUsers[uid] = true
-				count++
-			}
+			uid = "anonymous"
+		}
+
+		lastTime, seen := userLastCounted[uid]
+
+		// If never seen, or if this report is more than 24h after the last COUNTED report
+		if !seen || r.CreatedAt.Sub(lastTime) >= 24*time.Hour {
+			count++
+			userLastCounted[uid] = r.CreatedAt
 		}
 	}
+
+	log.Printf("Lot %s: Found %d raw reports, %d valid reports after deduplication (R1)", id, len(reports), count)
 
 	if count >= 5 {
 		return 50, []string{"R1: High density of citizen reports (>=5 unique in 48h)"}
