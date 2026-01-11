@@ -38,7 +38,7 @@ func SendQuery(c *fiber.Ctx) error {
 	}
 
 	c.Status(200)
-	return c.JSON(map[string]string{"status": "done"})
+	return c.JSON(q)
 }
 
 func GetQueries(c *fiber.Ctx) error {
@@ -49,4 +49,24 @@ func GetQueries(c *fiber.Ctx) error {
 	}
 	c.Status(200)
 	return c.JSON(queries)
+}
+
+func ReplyQuery(c *fiber.Ctx) error {
+	var data struct {
+		ID         string `json:"id"`
+		Reply      string `json:"reply"`
+		ReplyImage string `json:"reply_image"`
+	}
+	if err := c.BodyParser(&data); err != nil {
+		c.Status(400)
+		return c.JSON(fiber.Map{"error": "Invalid request body"})
+	}
+
+	if err := database.ReplyToQuery(data.ID, data.Reply, data.ReplyImage); err != nil {
+		c.Status(500)
+		return c.JSON(fiber.Map{"error": err.Error()})
+	}
+
+	c.Status(200)
+	return c.JSON(fiber.Map{"status": "replied"})
 }

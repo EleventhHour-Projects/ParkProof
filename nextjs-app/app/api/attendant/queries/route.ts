@@ -27,7 +27,8 @@ export async function GET(req: NextRequest) {
 
         // 3. Call Go Backend
         // Assuming Go backend is running on port 8000 locally
-        const goRes = await fetch(`http://127.0.0.1:8000/api/admin/queries?pid=${parkingLot.pid}`, {
+        console.log(`[AttendantProxy] Fetching queries for PID: ${parkingLot._id}`);
+        const goRes = await fetch(`http://127.0.0.1:8000/api/admin/queries?pid=${parkingLot._id}`, {
             cache: 'no-store'
         });
 

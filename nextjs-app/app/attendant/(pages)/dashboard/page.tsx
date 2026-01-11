@@ -49,8 +49,11 @@ export default function AttendantDashboard() {
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
-          // Filter out closed queries if needed, for now show all
-          setQueries(data.reverse()); // Show newest first
+          // Filter out queries that are already answered
+          // The backend might return status as string "ANSWERED" or number, so check both or based on type definition
+          // Updated filter: exclude ANSWERED
+          const activeQueries = data.filter((q: any) => q.status !== 'ANSWERED');
+          setQueries(activeQueries.reverse()); // Show newest first
         }
       }
     } catch (e) {
@@ -334,7 +337,13 @@ export default function AttendantDashboard() {
                     </div>
                     {q.response_required && (
                       <div className="flex sm:flex-row flex-col gap-2 mt-1">
-                        <button className="flex-1 bg-blue-100 text-blue-700 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-200 transition-colors">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/attendant/queries/${q.id}`);
+                          }}
+                          className="flex-1 bg-blue-100 text-blue-700 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-200 transition-colors"
+                        >
                           Reply
                         </button>
                         <button className="flex-1 bg-green-100 text-green-700 py-1.5 rounded-lg text-xs font-bold hover:bg-green-200 transition-colors">

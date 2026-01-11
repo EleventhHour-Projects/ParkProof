@@ -31,27 +31,78 @@ const SelectedParkingLotPage = () => {
         const data = await res.json();
         setParkingLot(data);
       } catch (e) {
-        setError( 'Something went wrong');
+        setError('Something went wrong');
       } finally {
         setLoading(false);
       }
     };
 
+    const fetchQueries = async () => {
+      try {
+        const res = await fetch(`/api/admin/queries?pid=${parkingLotId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        console.log(data);
+
+        const queries = data.map((q: any) => ({
+          id: q.id,
+          message: q.query,
+          timestamp: new Date(q.time),
+          status: q.status === "OPEN" ? "ACTIVE" : q.status,
+          responseRequired: q.response_required,
+          expiresAt: new Date(new Date(q.time).getTime() + q.with_in_time * 60000),
+          reply: q.reply,
+          replyImage: q.reply_image
+        }));
+
+        // sort by timestamp desc
+        queries.sort((a: any, b: any) => b.timestamp.getTime() - a.timestamp.getTime());
+
+        const active = queries.find((q: any) => q.status === 'ACTIVE');
+        if (active) setActiveQuery(active);
+
+        // set past queries (excluding the active one if it exists)
+        setPastQueries(queries.filter((q: any) => q.id !== active?.id));
+
+      } catch (error) {
+        console.log(error);
+      }
+    }
+
     if (parkingLotId) {
       fetchParkingLot();
+      fetchQueries();
     }
   }, [parkingLotId]);
 
-  const handleSendQuery = (message: string, reqResponse: boolean) => {
-    const newQuery: Query = {
-      id: Date.now().toString(),
-      message,
-      timestamp: new Date(),
-      status: 'ACTIVE',
-      responseRequired: reqResponse,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
-    };
-    setActiveQuery(newQuery);
+  const handleSendQuery = async (message: string, reqResponse: boolean) => {
+    try {
+      const res = await fetch("/api/admin/query", {
+        method: "POST",
+        body: JSON.stringify({
+          query: message,
+          to_parking_lot: parkingLotId,
+          response_required: reqResponse,
+          time: new Date().toISOString(),
+          with_in_time: 10,
+          type: "TEXT"
+        })
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      const newQuery: Query = {
+        id: data.id,
+        message: data.query,
+        timestamp: new Date(data.time),
+        status: data.status === "OPEN" ? "ACTIVE" : data.status,
+        responseRequired: data.response_required,
+        expiresAt: new Date(new Date(data.time).getTime() + data.with_in_time * 60000)
+      };
+      setActiveQuery(newQuery);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const handleExpireQuery = (query: Query) => {
@@ -83,14 +134,14 @@ const SelectedParkingLotPage = () => {
   }
 
   return (
-    
+
     <div className="min-h-screen bg-gray-50/50 p-6 md:p-8">
       <Link href="/admin/parking-lots">
         <button className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
           <ChevronLeft className="h-4 w-4" /> Back to Parking Lots
         </button>
       </Link>
-      
+
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 mt-6">
 
