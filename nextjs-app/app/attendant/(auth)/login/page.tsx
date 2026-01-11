@@ -48,68 +48,52 @@ const AttendantLoginPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-white font-['Manrope',sans-serif]">
-      {/* Left Panel - Branding & Illustration */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-between p-12 relative overflow-hidden">
-        {/* Background elements if needed, or simple color/gradient. Keeping it clean white/gray per design or light brand color */}
-        <div className="z-10">
-          <h1 className="text-5xl font-bold text-amber-500 mb-2">ParkProof</h1>
-          <div className="flex items-center gap-3 text-3xl font-semibold text-black mb-2">
-            Attendant Panel <ShieldCheck className="w-8 h-8 text-black" strokeWidth={2.5} />
-          </div>
-          <p className="text-gray-500 text-lg">Municipal Corporation of Delhi</p>
-        </div>
-
-        {/* Illustration Placeholder - Trying to mimic the provided design */}
-        <div className="relative z-10 flex-1 flex items-center justify-center pointer-events-none select-none">
-          {/* Using a placeholder SVG or composition since I don't have the exact asset */}
-          <div className="relative w-full max-w-md aspect-square">
-            {/*  We can leave this empty or put a generic parking illustration logic if we had one. 
-                      For now, I'll put a subtle gradient blob or similar to fill space pleasantly.
-                  */}
-            <div className="absolute inset-0 bg-blue-50 rounded-3xl transform rotate-3 scale-90 opacity-50"></div>
-            <div className="absolute inset-0 bg-amber-50 rounded-3xl transform -rotate-2 scale-95 opacity-50"></div>
-            {/* If user provided an image, we could use it. The user uploaded one, but I don't have the URL easily accessible in code unless I upload it to public. 
-                     I will leave a commented out Image component for them to fill.
-                  */}
-            {/* <Image src="/path/to/illustration.png" alt="Admin Login Illustration" layout="fill" objectFit="contain" /> */}
-            <div className="flex flex-col items-center justify-center h-full text-gray-300">
-              <div className="w-64 h-64 bg-gradient-to-tr from-blue-100 to-amber-100 rounded-full flex items-center justify-center shadow-inner">
-                <span className="text-4xl">🅿️</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer Logos Placeholder */}
-        <div className="z-10 flex gap-6 mt-8 grayscale hover:grayscale-0 transition-all opacity-70">
-          {/* Mock logos */}
-          <div className="h-10 w-10 bg-contain bg-no-repeat bg-center" style={{ backgroundImage: 'url(https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg)' }} title="Govt of India"></div>
-          <div className="h-10 w-10 bg-contain bg-no-repeat bg-center" style={{ backgroundImage: 'url(https://digitalindia.gov.in/assets/images/logo.png)' }} title="Digital India"></div>
-        </div>
+    <div className="min-h-screen w-full bg-white flex flex-col items-center justify-between py-8 px-6 relative font-['Manrope',sans-serif]">
+      {/* Header */}
+      <div className="w-full max-w-md z-10 pt-4 text-start sm:text-left pl-3">
+        <h1 className="text-5xl font-extrabold text-[#F59E0B] tracking-tight leading-tight">
+          Park
+          <br />
+          Proof
+        </h1>
+        <h2 className="text-xl font-bold text-gray-800 mt-2">
+          Parking Attendant App
+        </h2>
+        <p className="text-xs text-gray-500 font-medium">
+          Verify tickets • Manage parking • Report violations
+        </p>
       </div>
 
-      {/* Right Panel - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-gray-50/50">
-        <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-8">Attendant Login</h2>
+      {/* Illustration */}
+      <div className="relative w-full max-w-sm aspect-[4/3] my-4">
+        <Image
+          src="/attendant-login.png"
+          alt="Attendant Illustration"
+          fill
+          className="object-contain"
+          priority
+        />
+      </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <div className="relative">
-                <input
-                  type="text"
-                  name="phone"
-                  placeholder="Phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-5 py-4 bg-gray-100 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-200 transition-all font-medium placeholder-gray-400 text-gray-700"
-                />
-              </div>
-            </div>
+      {/* Login Card/Form Section */}
+      <div className="w-full max-w-md z-10 mb-8">
+        <div className="bg-gray-100 rounded-[2.5rem] p-8 shadow-sm border border-gray-100">
+          <h3 className="text-lg font-bold text-gray-700 mb-6 pl-1">
+            Attendant Login
+          </h3>
 
-            <div className="space-y-2">
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div className="space-y-4">
+              <input
+                type="text"
+                name="phone"
+                placeholder="Parking Lot Identification Number"
+                value={formData.phone}
+                onChange={handleChange}
+                required
+                className="w-full px-6 py-4 bg-gray-200/50 rounded-full border-none outline-none focus:ring-2 focus:ring-[#F59E0B] transition-all font-medium placeholder-gray-500 text-gray-800 text-sm"
+              />
+
               <div className="relative">
                 <input
                   type={showPassword ? "text" : "password"}
@@ -118,19 +102,14 @@ const AttendantLoginPage = () => {
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  className="w-full px-5 py-4 bg-gray-100 rounded-xl border-none outline-none focus:ring-2 focus:ring-amber-200 transition-all font-medium placeholder-gray-400 text-gray-700 pr-12"
+                  className="w-full px-6 py-4 bg-gray-200/50 rounded-full border-none outline-none focus:ring-2 focus:ring-[#F59E0B] transition-all font-medium placeholder-gray-500 text-gray-800 text-sm pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+                  className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-              <div className="flex justify-end pt-1">
-                <button type="button" className="text-xs text-blue-500 hover:text-blue-600 font-medium">
-                  Forgot Password? <span className="text-blue-500">Email Us</span>
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
             </div>
@@ -138,13 +117,29 @@ const AttendantLoginPage = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full py-4 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-semibold text-lg hover:shadow-lg hover:shadow-amber-500/30 transition-all active:scale-[0.98] ${isLoading ? 'opacity-70 cursor-not-allowed' : ''
+              className={`w-full py-4 rounded-full bg-[#F59E0B] hover:bg-amber-500 text-white font-bold text-lg shadow-lg hover:shadow-amber-500/30 transition-all transform hover:scale-[1.02] active:scale-[0.98] ${isLoading ? "opacity-70 cursor-not-allowed" : ""
                 }`}
             >
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoading ? "Logging in..." : "Login"}
             </button>
           </form>
         </div>
+      </div>
+
+      {/* Footer */}
+      <div className="z-10 flex flex-col items-center gap-2 pb-4">
+        <div className="flex items-center gap-4 opacity-100">
+          <Image
+            src="/assets/DigitalIndiaBlack.svg"
+            alt="Digital India"
+            width={120}
+            height={80}
+            className="object-contain"
+          />
+        </div>
+        <p className="text-gray-600 text-[10px] font-bold uppercase tracking-wider">
+          Municipal Corporation of Delhi
+        </p>
       </div>
     </div>
   );
