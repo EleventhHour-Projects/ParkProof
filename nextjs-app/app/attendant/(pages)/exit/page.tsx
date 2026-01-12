@@ -10,6 +10,7 @@ import { BsLightningChargeFill } from "react-icons/bs";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { MapPin } from "lucide-react";
+import { logTamperData } from "@/lib/tamper";
 
 // ----------------------------------------------------------------------
 // Types
@@ -89,7 +90,7 @@ const QRCodeScanner = ({
 export default function AttendantExitPage() {
     const [scanStatus, setScanStatus] = useState<"IDLE" | "SCANNED" | "PAID" | "ERROR">("IDLE");
     const [isScanning, setIsScanning] = useState(true);
-    const [pendingExit, setPendingExit] = useState<{ ticketId: string; vehicleNumber?: string; amountDue?: number } | null>(null);
+    const [pendingExit, setPendingExit] = useState<{ ticketId: string; vehicleNumber?: string; amountDue?: number; vehicleType?: string } | null>(null);
 
     // Data State
     const [loading, setLoading] = useState(true);
@@ -98,6 +99,7 @@ export default function AttendantExitPage() {
 
     // Real Data State
     const [vehicleNumber, setVehicleNumber] = useState<string>("");
+    const [vehicleType, setVehicleType] = useState<string>("4w");
     const [overdueAmount, setOverdueAmount] = useState<number>(0);
     const [ticketId, setTicketId] = useState<string | null>(null);
 
@@ -150,10 +152,12 @@ export default function AttendantExitPage() {
         try {
             let tId = "";
             let vNum = "";
+            let vType = "4w";
             try {
                 const parsed: VehicleQRCodeData = JSON.parse(decodedText);
                 tId = parsed.ticket_id;
                 vNum = parsed.vehicle;
+                vType = parsed.vehicle_type || "4w";
             } catch (err) {
                 if (decodedText.length > 5) tId = decodedText;
             }
@@ -181,11 +185,13 @@ export default function AttendantExitPage() {
             setPendingExit({
                 ticketId: tId,
                 vehicleNumber: data.vehicleNumber || vNum,
-                amountDue: data.amountDue
+                amountDue: data.amountDue,
+                vehicleType: vType
             });
 
             setTicketId(tId);
             setVehicleNumber(data.vehicleNumber || vNum);
+            setVehicleType(vType);
             setOverdueAmount(data.amountDue);
 
         } catch (e: any) {
@@ -221,6 +227,15 @@ export default function AttendantExitPage() {
 
             setScanStatus("PAID");
             toast.success("Exit Approved", { id: loadingToast });
+
+            // Log Tamper Data
+            logTamperData({
+                vehicleNo: vehicleNumber,
+                vehicleType: vehicleType,
+                parkingLotId: attendantData.parkingLot._id,
+                action: "EXIT"
+            });
+
             refreshHistory(); // Update list
 
             setTimeout(() => {

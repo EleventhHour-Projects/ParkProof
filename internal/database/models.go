@@ -23,3 +23,15 @@ type RiskScore struct {
 	Level        string        `bson:"level,omitempty"`      // keeping as optional
 	AnalyzedAt   time.Time     `bson:"analyzedAt,omitempty"` // keeping as optional
 }
+
+type TamperLog struct {
+	ID            bson.ObjectID `bson:"_id,omitempty" json:"id"`
+	VehicleNo     string        `bson:"vehicleNo" json:"vehicleNo"`
+	VehicleType   string        `bson:"vehicleType" json:"vehicleType"`
+	ParkingLotID  string        `bson:"parkingLotId" json:"parkingLotId"`
+	EntryExitTime time.Time     `bson:"entryExitTime" json:"entryExitTime"`
+	Hash          string        `bson:"hash" json:"hash"`
+	PrevHash      string        `bson:"prevHash" json:"prevHash"`
+	Action        string        `bson:"action" json:"action"` // "ENTRY" or "EXIT"
+	CreatedAt     time.Time     `bson:"createdAt" json:"createdAt"`
+}

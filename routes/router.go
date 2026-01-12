@@ -42,5 +42,9 @@ func Router() {
 	// Physical Ticket Routes
 	app.Post("/internal/physicalticket", api.GeneratePhysicalTicket)
 
+	// Tamper Proof System Routes
+	app.Post("/api/tamper-logs", api.AddTamperLog)
+	app.Get("/api/tamper-logs", api.GetTamperLogs)
+
 	log.Fatal(app.Listen(":8000"))
 }

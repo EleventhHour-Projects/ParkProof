@@ -14,6 +14,7 @@ import { MdOutlineConfirmationNumber, MdOutlineQrCodeScanner, MdQrCodeScanner } 
 import { BsLightningChargeFill } from "react-icons/bs";
 import { IoCarSport, IoBicycle, IoArrowForwardCircle, IoScan } from "react-icons/io5";
 import { toast } from "sonner";
+import { logTamperData } from "@/lib/tamper";
 
 // ----------------------------------------------------------------------
 // Types
@@ -226,6 +227,14 @@ export default function AttendantEntryPage() {
             setScanMessage(`Vehicle Entered: ${pendingEntry.vehicle}`);
             setScanStatus("SUCCESS");
             toast.success(`Vehicle Entered: ${pendingEntry.vehicle}`);
+
+            // Log Tamper Data
+            logTamperData({
+                vehicleNo: pendingEntry.vehicle,
+                vehicleType: pendingEntry.vehicle_type,
+                parkingLotId: attendantData.parkingLot._id,
+                action: "ENTRY"
+            });
 
             // Clear pending and resume scanning after delay
             setTimeout(() => {
