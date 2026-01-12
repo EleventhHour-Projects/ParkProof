@@ -56,8 +56,8 @@ func analyzeLot(id string) {
 	score += r2Score
 	factors = append(factors, r2Factors...)
 
-	// Rule 3: Ticket Duration Distribution Shift
-	r3Score, r3Factors := checkDurationShift(id)
+	// Rule 3: Attendant Ignoring Queries (Open > 10m)
+	r3Score, r3Factors := checkIgnoredQueries(id)
 	score += r3Score
 	factors = append(factors, r3Factors...)
 
@@ -204,49 +204,34 @@ func checkTrafficMismatch(id string) (int, []string) {
 	return 0, nil
 }
 
-// Rule 3: Duration Shift
-func checkDurationShift(id string) (int, []string) {
-	// Current Window: Last 24 hours
-	currentTickets, err := database.GetTicketsLastWindow(id, 24*time.Hour)
+// Rule 3: Ignored Queries
+func checkIgnoredQueries(id string) (int, []string) {
+	queries, err := database.GetQueryByParkingLot(id)
 	if err != nil {
-		return 0, nil
-	}
-	if len(currentTickets) < 10 {
-		return 0, nil // Not enough data
-	}
-
-	// Baseline Window: Last 30 days
-	baselineTickets, err := database.GetTicketsLastWindow(id, 30*24*time.Hour)
-	if err != nil {
+		log.Println("Error getting queries for R3:", err)
 		return 0, nil
 	}
 
-	currentShortRatio := calculateShortStayRatio(currentTickets)
-	baselineShortRatio := calculateShortStayRatio(baselineTickets)
+	ignoredCount := 0
+	for _, q := range queries {
+		// Check if status is OPEN and created more than 10 minutes ago
+		if q.Status == database.QueryStatusOpen && time.Since(q.Time) > 10*time.Minute {
+			ignoredCount++
+		}
+	}
 
-	// Threshold: 20% shift
-	if abs(currentShortRatio-baselineShortRatio) > 0.2 {
-		return 30, []string{"R3: Significant shift in ticket duration distribution"}
+	if ignoredCount > 0 {
+		// Log the finding
+		log.Printf("Lot %s: Found %d ignored queries (>10m)", id, ignoredCount)
+		// Return risk score. If even one query is ignored for > 10 mins, it's a risk.
+		// We can scale the score or just give a flat penalty. The user request implied "risk score increase".
+		// Let's give a significant penalty because ignoring customers is bad.
+		// E.g., 30 points. If multiple, maybe more?
+		// Let's stick to a flat 30 for now as per "risk score increase" generic request, similar to other rules.
+		return 30, []string{"R3: Attendant ignoring queries (>10m idle)"}
 	}
 
 	return 0, nil
-}
-
-func calculateShortStayRatio(tickets []database.Ticket) float64 {
-	if len(tickets) == 0 {
-		return 0
-	}
-	shortCount := 0
-	for _, t := range tickets {
-		// Assess duration from ValidTill (assuming ValidTill - CreatedAt ~ duration)
-		// Or if we have actual duration. Default ticket is 1h10m.
-		// If ValidTill is roughly 1-2 hours from CreatedAt, count as short stay.
-		duration := t.ValidTill.Sub(t.CreatedAt)
-		if duration < 2*time.Hour {
-			shortCount++
-		}
-	}
-	return float64(shortCount) / float64(len(tickets))
 }
 
 func abs(x float64) float64 {
